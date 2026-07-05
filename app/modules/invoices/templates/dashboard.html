@@ -54,12 +54,12 @@
       <tr>
         <td style="white-space: nowrap;"><b>Exporter les validées</b></td>
         <td class="mono">curl {{ request.base_url }}api/invoices?status=validee</td>
-        <td style="text-align: right;"><a class="row-link" href="/api/invoices?status=validee">essayer →</a></td>
+        <td style="text-align: right;"><a class="row-link" href="/api/invoices?status=validee" hx-boost="false">essayer →</a></td>
       </tr>
       <tr>
         <td style="white-space: nowrap;"><b>Pousser une facture</b></td>
         <td class="mono">curl -F "file=@facture.pdf" {{ request.base_url }}api/invoices</td>
-        <td style="text-align: right;"><a class="row-link" href="/docs">API docs →</a></td>
+        <td style="text-align: right;"><a class="row-link" href="/docs" hx-boost="false">API docs →</a></td>
       </tr>
     </table>
   </div>
