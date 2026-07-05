@@ -1,0 +1,12 @@
+[project]
+name = "atelia"
+version = "0.1.0"
+description = "AtelIA — atelier IA de la Conserverie du Sud (POC facture électronique, souverain)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "litellm>=1.55",
+    "asyncpg>=0.30",
+    "pydantic-settings>=2.6",
+]
