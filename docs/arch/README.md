@@ -4,9 +4,10 @@ Documentation d'architecture au format [arc42](https://arc42.org/), en douze sec
 (un fichier chacune). Règle : on ne documente que **ce qui est construit** — les sections
 se remplissent au fil des slices, jamais en avance.
 
-État après la Slice R0 (refactor socle + hub) : seule la
-[section 5 — Vue des briques](05-vue-des-briques.md) est rédigée (structure
-socle/modules et pattern de registre). Les autres sections sont des emplacements.
+État après la Slice R0 (refactor socle + hub) : la
+[section 5 — Vue des briques](05-vue-des-briques.md) (structure socle/modules et pattern
+de registre) et la [section 9 — Décisions](09-decisions-architecture.md) (ADR-101…106)
+sont rédigées. Les autres sections sont des emplacements.
 
 | # | Section | État |
 |---|---------|------|
@@ -18,7 +19,7 @@ socle/modules et pattern de registre). Les autres sections sont des emplacements
 | 6 | [Vue runtime](06-vue-runtime.md) | à rédiger |
 | 7 | [Vue déploiement](07-vue-deploiement.md) | à rédiger |
 | 8 | [Concepts transversaux](08-concepts-transversaux.md) | à rédiger |
-| 9 | [Décisions d'architecture](09-decisions-architecture.md) | à rédiger |
+| 9 | [Décisions d'architecture](09-decisions-architecture.md) | **rédigée** — ADR-101…106 dans [`adr/`](adr/) |
 | 10 | [Exigences qualité](10-exigences-qualite.md) | à rédiger |
 | 11 | [Risques et dette technique](11-risques-et-dette.md) | à rédiger |
 | 12 | [Glossaire](12-glossaire.md) | à rédiger |
