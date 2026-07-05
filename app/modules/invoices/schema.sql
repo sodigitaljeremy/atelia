@@ -39,3 +39,16 @@ CREATE INDEX IF NOT EXISTS idx_invoice_line_invoice ON invoice_line (invoice_id)
 ALTER TABLE invoice ADD COLUMN IF NOT EXISTS anomalies    JSONB   NOT NULL DEFAULT '[]';
 ALTER TABLE invoice ADD COLUMN IF NOT EXISTS compliance   JSONB   NOT NULL DEFAULT '[]';
 ALTER TABLE invoice ADD COLUMN IF NOT EXISTS is_duplicate BOOLEAN NOT NULL DEFAULT false;
+
+-- Slice 3 : journal des gains, APPEND-ONLY. Un événement par facture validée,
+-- jamais supprimé : rejeter ensuite la facture ne retire PAS le gain déjà acté
+-- (le temps de saisie a réellement été économisé au moment de la validation).
+-- UNIQUE (invoice_id) + ON CONFLICT DO NOTHING = idempotence (pas de double gain).
+CREATE TABLE IF NOT EXISTS gain_event (
+    id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    invoice_id        BIGINT REFERENCES invoice (id) ON DELETE SET NULL,
+    minutes_saved     INTEGER       NOT NULL,
+    cost_avoided_eur  NUMERIC(12, 2) NOT NULL,
+    created_at        TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    UNIQUE (invoice_id)
+);

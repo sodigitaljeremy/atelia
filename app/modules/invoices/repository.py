@@ -6,10 +6,7 @@ from decimal import Decimal
 import asyncpg
 
 from app.core import db
-
-# Hypothèses de gain affichées sur le dashboard (réf. brief : ~26 €/facture papier)
-MINUTES_SAVED_PER_INVOICE = 5
-COST_AVOIDED_PER_INVOICE_EUR = 26
+from app.core.config import settings
 
 HEADER_FIELDS = (
     "supplier_name",
@@ -152,8 +149,42 @@ async def set_status(invoice_id: int, status: str, header_updates: dict | None =
     return result == "UPDATE 1"
 
 
+async def record_gain(invoice_id: int) -> None:
+    """Acte le gain d'une validation dans le journal append-only (une seule fois par facture)."""
+    async with db.pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO gain_event (invoice_id, minutes_saved, cost_avoided_eur)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (invoice_id) DO NOTHING
+            """,
+            invoice_id,
+            settings.minutes_saved_per_invoice,
+            settings.cost_avoided_per_invoice_eur,
+        )
+
+
+async def backfill_gain_events() -> None:
+    """Crée l'événement manquant pour les factures validées avant le journal (idempotent).
+
+    `created_at` reprend `updated_at` de la facture (≈ date de validation) pour
+    garder un historique daté cohérent. Relançable sans doublonner (UNIQUE invoice_id).
+    """
+    async with db.pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO gain_event (invoice_id, minutes_saved, cost_avoided_eur, created_at)
+            SELECT id, $1, $2, updated_at FROM invoice WHERE status = 'validee'
+            ON CONFLICT (invoice_id) DO NOTHING
+            """,
+            settings.minutes_saved_per_invoice,
+            settings.cost_avoided_per_invoice_eur,
+        )
+
+
 async def gains_metrics() -> dict:
-    """Métrique de gain : factures validées → heures économisées + coût évité."""
+    """Métriques du dashboard. Les gains viennent du journal gain_event (cumul
+    append-only : rejeter une facture déjà validée ne fait PAS redescendre le cumul)."""
     async with db.pool.acquire() as conn:
         row = await conn.fetchrow(
             """
@@ -166,17 +197,47 @@ async def gains_metrics() -> dict:
             FROM invoice
             """
         )
-    validated = row["validated"]
+        gains = await conn.fetchrow(
+            """
+            SELECT coalesce(sum(minutes_saved), 0)    AS minutes,
+                   coalesce(sum(cost_avoided_eur), 0) AS cost
+            FROM gain_event
+            """
+        )
     return {
-        "validated": validated,
+        "validated": row["validated"],
         "pending": row["pending"],
         "rejected": row["rejected"],
         "anomalies_detected": row["anomalies_detected"],
         "duplicates_flagged": row["duplicates_flagged"],
-        "hours_saved": (Decimal(validated * MINUTES_SAVED_PER_INVOICE) / 60).quantize(
-            Decimal("0.01")
-        ),
-        "cost_avoided_eur": validated * COST_AVOIDED_PER_INVOICE_EUR,
-        "minutes_per_invoice": MINUTES_SAVED_PER_INVOICE,
-        "cost_per_invoice_eur": COST_AVOIDED_PER_INVOICE_EUR,
+        "hours_saved": (Decimal(gains["minutes"]) / 60).quantize(Decimal("0.01")),
+        "cost_avoided_eur": gains["cost"],
+        "minutes_per_invoice": settings.minutes_saved_per_invoice,
+        "cost_per_invoice_eur": settings.cost_avoided_per_invoice_eur,
     }
+
+
+async def gains_history(limit: int = 10) -> list[asyncpg.Record]:
+    """Derniers événements de gain, avec la facture associée (peut avoir disparu : LEFT JOIN)."""
+    async with db.pool.acquire() as conn:
+        return await conn.fetch(
+            """
+            SELECT g.created_at, g.minutes_saved, g.cost_avoided_eur,
+                   i.invoice_number, i.supplier_name
+            FROM gain_event g LEFT JOIN invoice i ON i.id = g.invoice_id
+            ORDER BY g.created_at DESC, g.id DESC
+            LIMIT $1
+            """,
+            limit,
+        )
+
+
+async def gains_timeline() -> list[asyncpg.Record]:
+    """Coût évité agrégé par jour (ordre chronologique) — base de la courbe cumulée."""
+    async with db.pool.acquire() as conn:
+        return await conn.fetch(
+            """
+            SELECT created_at::date AS day, sum(cost_avoided_eur) AS cost
+            FROM gain_event GROUP BY day ORDER BY day
+            """
+        )

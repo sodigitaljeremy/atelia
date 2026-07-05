@@ -7,6 +7,7 @@ package suffit à le brancher (router monté, schéma appliqué, tuile sur le hu
 
 import importlib
 import pkgutil
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -25,6 +26,9 @@ class Module:
     router: APIRouter
     schema_path: Path  # schema.sql idempotent, appliqué au démarrage par core.db
     nav: list[tuple[str, str, str]] = field(default_factory=list)  # (libellé, url, clé active)
+    # Hook optionnel exécuté au démarrage après l'application des schémas
+    # (migrations de données idempotentes, backfills…)
+    on_startup: Callable[[], Awaitable[None]] | None = None
 
 
 def _discover() -> list[Module]:

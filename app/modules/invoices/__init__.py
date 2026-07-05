@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from app.core.registry import Module
+from app.modules.invoices import repository
 from app.modules.invoices.router import router
 
 MODULE = Module(
@@ -14,4 +15,5 @@ MODULE = Module(
     router=router,
     schema_path=Path(__file__).parent / "schema.sql",
     nav=[("Factures", "/invoices", "invoices"), ("Gains", "/dashboard", "dashboard")],
+    on_startup=repository.backfill_gain_events,
 )

@@ -4,6 +4,7 @@ Fonctions pures (dict → list[dict]) : calculées à l'ingestion, stockées en 
 testées unitairement dans tests/test_checks.py.
 """
 
+from datetime import date
 from decimal import Decimal
 
 # Tolérance d'arrondi sur les rapprochements de totaux (centimes)
@@ -35,9 +36,13 @@ def _anomaly(code: str, severity: str, message: str) -> dict:
     return {"code": code, "severity": severity, "message": message}
 
 
-def check_anomalies(header: dict, lines: list[dict]) -> list[dict]:
-    """Contrôles de cohérence des valeurs. Chaque anomalie : code, sévérité, message clair."""
+def check_anomalies(header: dict, lines: list[dict], today: date | None = None) -> list[dict]:
+    """Contrôles de cohérence des valeurs. Chaque anomalie : code, sévérité, message clair.
+
+    `today` est injectable pour les tests (défaut : date du jour, pour le contrôle d'échéance).
+    """
     anomalies = []
+    today = today or date.today()
 
     total_ht = header.get("total_ht")
     total_vat = header.get("total_vat")
@@ -108,6 +113,27 @@ def check_anomalies(header: dict, lines: list[dict]) -> list[dict]:
                 AVERTISSEMENT,
                 f"L'échéance ({due_date:%d/%m/%Y}) précède la date d'émission "
                 f"({issue_date:%d/%m/%Y}).",
+            )
+        )
+    if due_date and due_date < today:
+        anomalies.append(
+            _anomaly(
+                "echeance_depassee",
+                AVERTISSEMENT,
+                f"L'échéance ({due_date:%d/%m/%Y}) est déjà dépassée à l'ingestion : "
+                "facture à traiter en priorité (risque de pénalités de retard).",
+            )
+        )
+
+    siren = header.get("supplier_siren")
+    if siren is not None and not (siren.isdigit() and len(siren) == 9):
+        anomalies.append(
+            _anomaly(
+                "fournisseur_etranger",
+                AVERTISSEMENT,
+                f"Identifiant fournisseur « {siren} » hors format SIREN (9 chiffres) : "
+                "fournisseur étranger probable — régime de TVA non française à vérifier "
+                "(autoliquidation intracommunautaire ?).",
             )
         )
 

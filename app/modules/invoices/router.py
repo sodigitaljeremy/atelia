@@ -8,7 +8,7 @@ from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 
 from app.core.templates import module_templates
-from app.modules.invoices import checks, repository, services
+from app.modules.invoices import checks, gains, repository, services
 from app.modules.invoices.extraction import ExtractionError
 
 templates = module_templates(Path(__file__).parent / "templates")
@@ -131,6 +131,8 @@ async def invoice_validate(
     }
     if not await repository.set_status(invoice_id, "validee", updates):
         raise HTTPException(status_code=404, detail="Facture introuvable")
+    # Gain acté dans le journal append-only — un rejet ultérieur ne le retirera pas
+    await repository.record_gain(invoice_id)
     return RedirectResponse("/dashboard", status_code=303)
 
 
@@ -144,8 +146,21 @@ async def invoice_reject(invoice_id: int):
 @ui.get("/dashboard")
 async def dashboard(request: Request):
     metrics = await repository.gains_metrics()
+    history = await repository.gains_history()
+    daily = [(row["day"], row["cost"]) for row in await repository.gains_timeline()]
+    series = gains.cumulative_series(daily)
     return templates.TemplateResponse(
-        request, "dashboard.html", {"metrics": metrics, "active": "dashboard"}
+        request,
+        "dashboard.html",
+        {
+            "metrics": metrics,
+            "history": history,
+            "series": series,
+            "svg_points": gains.svg_polyline_points(series),
+            "svg_width": gains.SVG_WIDTH,
+            "svg_height": gains.SVG_HEIGHT,
+            "active": "dashboard",
+        },
     )
 
 

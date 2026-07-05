@@ -138,6 +138,61 @@ SUPPLIERS = [
             ),
         ],
     },
+    {
+        # Fournisseur étranger fictif : identifiant TVA intracom (non-SIREN) → déclenche
+        # l'avertissement « fournisseur_etranger ». TVA 0 % (autoliquidation) : plausible.
+        "slug": "aceites-del-ebro",
+        "name": "Aceites del Ebro SL",
+        "siren": "ESB28415661",
+        "vat": "ESB28415661",
+        "address": ("Polígono Malpica, Calle E 12", "50016", "Zaragoza (Espagne)"),
+        "number": "AE-2026-0078",
+        "issue": date(2026, 6, 20),
+        "lines": [
+            (
+                "Huile d'olive vierge extra, fût inox 50 L",
+                Decimal("4"),
+                "LTR",
+                Decimal("212.00"),
+                Decimal("0"),
+            ),
+            (
+                "Olives noires d'Aragon dénoyautées, seau 10 kg",
+                Decimal("6"),
+                "KGM",
+                Decimal("38.50"),
+                Decimal("0"),
+            ),
+        ],
+    },
+    {
+        # Échéance explicite déjà passée à l'ingestion → avertissement « echeance_depassee »
+        # (dates figées : l'avertissement vaut tant que l'ingestion a lieu après le 11/06/2026).
+        "slug": "salaisons-pyrenees",
+        "name": "Salaisons des Pyrénées SARL",
+        "siren": "523187640",
+        "vat": "FR41523187640",
+        "address": ("3 route du Col d'Aspin", "65710", "Campan"),
+        "number": "SP-2026-0341",
+        "issue": date(2026, 5, 12),
+        "due": date(2026, 6, 11),
+        "lines": [
+            (
+                "Ventrèche roulée IGP, pièce 2,5 kg",
+                Decimal("12"),
+                "KGM",
+                Decimal("14.20"),
+                Decimal("5.5"),
+            ),
+            (
+                "Saucisse sèche de montagne, carton 5 kg",
+                Decimal("6"),
+                "KGM",
+                Decimal("16.80"),
+                Decimal("5.5"),
+            ),
+        ],
+    },
 ]
 
 CENT = Decimal("0.01")
@@ -351,7 +406,7 @@ def main() -> None:
     SAMPLES_DIR.mkdir(exist_ok=True)
     for supplier in SUPPLIERS:
         totals = compute_totals(supplier["lines"])
-        due = supplier["issue"] + timedelta(days=30)
+        due = supplier.get("due") or supplier["issue"] + timedelta(days=30)
         xml_bytes = build_cii_xml(supplier, totals, due)
         pdf_bytes = build_pdf(supplier, totals, due)
         facturx_pdf = generate_from_binary(pdf_bytes, xml_bytes)

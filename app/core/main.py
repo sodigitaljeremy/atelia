@@ -26,6 +26,9 @@ async def about(request: Request):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.connect()
+    for module in registry.modules:
+        if module.on_startup is not None:
+            await module.on_startup()
     yield
     await db.disconnect()
 

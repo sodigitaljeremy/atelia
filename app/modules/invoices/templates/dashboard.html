@@ -9,7 +9,17 @@
 {% endblock %}
 {% block content %}
   <h1>Gains du traitement automatisé</h1>
-  <p class="subtitle">Calculés uniquement sur les factures <b>validées par un opérateur</b>.</p>
+  <p class="subtitle">
+    Cumul acté à chaque validation par un opérateur — un journal d'événements,
+    jamais décrémenté (rejeter ensuite une facture ne retire pas le temps déjà économisé).
+  </p>
+
+  <div class="alert" style="background: #f0e6c8; border-color: #dcc98f; color: #7a5f18;">
+    Hypothèses <b>paramétrables</b> : {{ metrics.minutes_per_invoice }} min et
+    {{ metrics.cost_per_invoice_eur }} € économisés par facture évitée
+    (variables de configuration <span class="mono">MINUTES_SAVED_PER_INVOICE</span> /
+    <span class="mono">COST_AVOIDED_PER_INVOICE_EUR</span>) — à calibrer sur votre réalité terrain.
+  </div>
 
   <div class="stats">
     <div class="card stat accent">
@@ -43,6 +53,44 @@
       <div class="stat-note">même fournisseur + même n° — double saisie évitée</div>
     </div>
   </div>
+
+  {% if series %}
+    <h2>Gains cumulés dans le temps</h2>
+    <div class="card">
+      <svg viewBox="0 0 {{ svg_width }} {{ svg_height }}" width="100%" height="{{ svg_height }}"
+           role="img" aria-label="Courbe des gains cumulés (€) par jour">
+        <polyline points="{{ svg_points }}" fill="none" stroke="var(--green)" stroke-width="2.5"/>
+        <text x="8" y="14" font-family="var(--sans)" font-size="11" fill="var(--muted)">
+          {{ series[-1][1] | eur }} cumulés</text>
+        <text x="8" y="{{ svg_height - 4 }}" font-family="var(--sans)" font-size="11" fill="var(--muted)">
+          {{ series[0][0].strftime("%d/%m/%Y") }}</text>
+        <text x="{{ svg_width - 8 }}" y="{{ svg_height - 4 }}" text-anchor="end"
+              font-family="var(--sans)" font-size="11" fill="var(--muted)">
+          {{ series[-1][0].strftime("%d/%m/%Y") }}</text>
+      </svg>
+    </div>
+
+    <h2>Derniers gains actés</h2>
+    <div class="card" style="padding: 8px 16px;">
+      <table>
+        <thead>
+          <tr><th>Quand</th><th>Facture</th><th>Fournisseur</th>
+              <th class="num">Minutes</th><th class="num">Coût évité</th></tr>
+        </thead>
+        <tbody>
+          {% for event in history %}
+            <tr>
+              <td class="mono">{{ event.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+              <td class="mono">{{ event.invoice_number or "—" }}</td>
+              <td>{{ event.supplier_name or "—" }}</td>
+              <td class="num mono">{{ event.minutes_saved }}</td>
+              <td class="num mono">{{ event.cost_avoided_eur | eur }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
 
   <h2>Intégration ERP</h2>
   <div class="card">

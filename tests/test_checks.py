@@ -39,7 +39,8 @@ def codes(anomalies: list[dict]) -> set[str]:
 
 
 def test_facture_saine_aucune_anomalie():
-    assert checks.check_anomalies(header_ok(), lines_ok()) == []
+    # `today` injecté : le verdict d'une facture saine ne doit pas dépendre de l'horloge
+    assert checks.check_anomalies(header_ok(), lines_ok(), today=date(2026, 6, 15)) == []
 
 
 def test_somme_lignes_differente_du_total_ht_est_bloquante():
@@ -101,6 +102,33 @@ def test_ttc_nul_est_bloquant():
 def test_champs_absents_ne_plantent_pas():
     header = dict.fromkeys(header_ok())
     assert checks.check_anomalies(header, []) == []
+
+
+def test_echeance_depassee_est_un_avertissement():
+    anomalies = checks.check_anomalies(header_ok(), lines_ok(), today=date(2026, 8, 1))
+    (anomalie,) = [a for a in anomalies if a["code"] == "echeance_depassee"]
+    assert anomalie["severity"] == checks.AVERTISSEMENT
+
+
+def test_echeance_future_ou_absente_sans_avertissement():
+    # échéance au 01/07, contrôle au 15/06 → rien
+    anomalies = checks.check_anomalies(header_ok(), lines_ok(), today=date(2026, 6, 15))
+    assert "echeance_depassee" not in codes(anomalies)
+    anomalies = checks.check_anomalies(header_ok(due_date=None), lines_ok(), today=date(2026, 8, 1))
+    assert "echeance_depassee" not in codes(anomalies)
+
+
+def test_identifiant_non_siren_signale_fournisseur_etranger():
+    anomalies = checks.check_anomalies(header_ok(supplier_siren="ESB28415661"), lines_ok())
+    (anomalie,) = [a for a in anomalies if a["code"] == "fournisseur_etranger"]
+    assert anomalie["severity"] == checks.AVERTISSEMENT
+    assert "ESB28415661" in anomalie["message"]
+
+
+def test_siren_francais_ou_absent_sans_avertissement_etranger():
+    assert "fournisseur_etranger" not in codes(checks.check_anomalies(header_ok(), lines_ok()))
+    anomalies = checks.check_anomalies(header_ok(supplier_siren=None), lines_ok())
+    assert "fournisseur_etranger" not in codes(anomalies)  # l'absence relève de la conformité
 
 
 # --- Conformité (présence des mentions) --------------------------------------
