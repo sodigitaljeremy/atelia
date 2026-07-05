@@ -11,6 +11,7 @@ Les décisions structurantes sont consignées en ADR (un fichier par décision) 
 | [ADR-104](adr/ADR-104-agent-function-calling-api-publiques.md) | Agent M3 en function-calling sur API publiques officielles (pas de scraping) | Accepté, non encore implémenté (M3) |
 | [ADR-105](adr/ADR-105-donnees-publiques-synthetiques.md) | Données publiques + synthétiques uniquement | Accepté — appliqué sur M1 ; volet public à venir (M2/M3) |
 | [ADR-106](adr/ADR-106-couche-llm-agnostique.md) | Couche LLM agnostique : Mistral par défaut, swappable Claude via LiteLLM | Accepté / implémenté (Slice 0) |
+| [ADR-107](adr/ADR-107-journal-gains-immuable.md) | Journal de gains immuable (append-only), tarif runtime non rétroactif | Accepté / implémenté (Slices 3-4) |
 
 Les ADR historiques du POC v1 (numérotés ADR-001…005 dans les commentaires du code)
 sont antérieurs à cette série ; leurs décisions toujours en vigueur sont reprises
