@@ -62,3 +62,4 @@ Ingestion côté ERP : `curl -F "file=@samples/<facture>.pdf" http://localhost:8
 - [ ] Slice 2 — M1 robustesse : anomalies, doublons, enrichissement Sirene
 - [ ] Slice 3 — M2 RAG conformité (réponses sourcées)
 - [ ] Slice 4 — Bonus (Open Food Facts, polish UI)
+
