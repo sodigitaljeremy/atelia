@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Facture {{ invoice.invoice_number or invoice.id }} — AtelIA{% endblock %}
+{% block content %}
+  <h1>Contrôle avant comptabilisation</h1>
+  <p class="subtitle">
+    Facture <span class="mono">{{ invoice.invoice_number or "sans numéro" }}</span>
+    · profil <span class="mono">{{ invoice.profile or "?" }}</span>
+    · extraction <span class="mono">{{ invoice.source }}</span>
+    (confiance <span class="mono">{{ "%.0f" | format(invoice.confidence * 100) }} %</span>)
+  </p>
+
+  <form action="/invoices/{{ invoice.id }}/validate" method="post" id="validate-form">
+    <h2>Entête — corrigez si besoin</h2>
+    <div class="card">
+      <div class="field-grid">
+        <div style="grid-column: span 2;">
+          <label for="supplier_name">Fournisseur</label>
+          <input type="text" id="supplier_name" name="supplier_name" value="{{ invoice.supplier_name or '' }}">
+        </div>
+        <div>
+          <label for="supplier_siren">SIREN</label>
+          <input type="text" id="supplier_siren" name="supplier_siren" value="{{ invoice.supplier_siren or '' }}">
+        </div>
+        <div>
+          <label for="invoice_number">N° facture</label>
+          <input type="text" id="invoice_number" name="invoice_number" value="{{ invoice.invoice_number or '' }}">
+        </div>
+        <div>
+          <label for="issue_date">Date d'émission</label>
+          <input type="date" id="issue_date" name="issue_date" value="{{ invoice.issue_date or '' }}">
+        </div>
+        <div>
+          <label for="due_date">Échéance</label>
+          <input type="date" id="due_date" name="due_date" value="{{ invoice.due_date or '' }}">
+        </div>
+        <div>
+          <label for="total_ht">Total HT</label>
+          <input type="text" id="total_ht" name="total_ht" inputmode="decimal" value="{{ invoice.total_ht or '' }}">
+        </div>
+        <div>
+          <label for="total_vat">Total TVA</label>
+          <input type="text" id="total_vat" name="total_vat" inputmode="decimal" value="{{ invoice.total_vat or '' }}">
+        </div>
+        <div>
+          <label for="total_ttc">Total TTC</label>
+          <input type="text" id="total_ttc" name="total_ttc" inputmode="decimal" value="{{ invoice.total_ttc or '' }}">
+        </div>
+        <input type="hidden" name="currency" value="{{ invoice.currency }}">
+      </div>
+    </div>
+
+    <h2>Lignes ({{ lines | length }})</h2>
+    <div class="card" style="padding: 8px 16px;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Désignation</th>
+            <th class="num">Qté</th>
+            <th class="num">PU HT</th>
+            <th class="num">Montant HT</th>
+            <th class="num">TVA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in lines %}
+            <tr>
+              <td class="mono">{{ line.line_number }}</td>
+              <td>{{ line.description or "—" }}</td>
+              <td class="num mono">{{ line.quantity | qty }}</td>
+              <td class="num mono">{{ line.unit_price | eur }}</td>
+              <td class="num mono">{{ line.line_amount_ht | eur }}</td>
+              <td class="num mono">{{ line.vat_rate | qty }} %</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display: flex; gap: 14px; align-items: center; margin-top: 28px;">
+      <button type="submit" class="btn btn-primary">✓ Valider et comptabiliser</button>
+      <button type="submit" class="btn btn-danger" form="reject-form">Rejeter</button>
+      <a href="/invoices" class="btn btn-quiet" style="margin-left: auto;">← Retour à la file</a>
+    </div>
+  </form>
+  <form action="/invoices/{{ invoice.id }}/reject" method="post" id="reject-form"></form>
+{% endblock %}

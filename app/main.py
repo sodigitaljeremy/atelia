@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 
-from app import db, llm
+from app import api, db, llm, ui
 
 
 @asynccontextmanager
@@ -15,9 +16,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AtelIA",
     description="Atelier IA de la Conserverie du Sud — POC facture électronique, souverain.",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(api.router)
+app.include_router(ui.router)
 
 
 @app.get("/health")

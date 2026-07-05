@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AtelIA{% endblock %}</title>
+  <script src="/static/htmx.min.js" defer></script>
+  <style>
+    :root {
+      --paper: #f5f1e6;
+      --card: #fdfbf4;
+      --ink: #24281e;
+      --muted: #77705c;
+      --line: #ddd5bf;
+      --line-soft: #eae4d2;
+      --green: #2e5539;
+      --green-deep: #223f2b;
+      --terra: #a8402c;
+      --terra-soft: #f3e0da;
+      --gold: #9a7b2d;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --serif: Georgia, "Times New Roman", serif;
+      --sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      font-family: var(--serif);
+      background: var(--paper);
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(46, 85, 57, 0.045) 31px, rgba(46, 85, 57, 0.045) 32px);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    header.topbar {
+      background: var(--green-deep);
+      color: var(--paper);
+      border-bottom: 3px solid var(--gold);
+    }
+    .topbar-inner {
+      max-width: 1080px; margin: 0 auto; padding: 14px 24px;
+      display: flex; align-items: baseline; gap: 28px; flex-wrap: wrap;
+    }
+    .brand { font-size: 22px; letter-spacing: 0.5px; }
+    .brand b { font-weight: 700; }
+    .brand small { font-family: var(--sans); font-size: 11px; color: #cdc7ae; letter-spacing: 1.6px; text-transform: uppercase; margin-left: 12px; }
+    nav { margin-left: auto; display: flex; gap: 4px; font-family: var(--sans); font-size: 13.5px; }
+    nav a {
+      color: #d8d2ba; text-decoration: none; padding: 5px 14px;
+      border-radius: 3px; letter-spacing: 0.4px;
+    }
+    nav a:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    nav a.active { color: var(--green-deep); background: var(--paper); font-weight: 600; }
+    main { max-width: 1080px; margin: 0 auto; padding: 36px 24px 64px; }
+    h1 { font-size: 30px; font-weight: 400; margin-bottom: 4px; }
+    h1 + .subtitle { color: var(--muted); font-style: italic; margin-bottom: 28px; }
+    h2 { font-size: 15px; font-family: var(--sans); font-weight: 600; text-transform: uppercase; letter-spacing: 1.4px; color: var(--green); margin: 32px 0 12px; }
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 4px; padding: 22px 24px;
+      box-shadow: 0 1px 0 rgba(36, 40, 30, 0.05);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+    th {
+      font-family: var(--sans); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--muted); font-weight: 600;
+      text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--line);
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: baseline; }
+    tr:last-child td { border-bottom: none; }
+    td.num, th.num { text-align: right; }
+    .mono { font-family: var(--mono); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+    a.row-link { color: var(--green); font-weight: 600; }
+    .badge {
+      display: inline-block; font-family: var(--sans); font-size: 11px; font-weight: 600;
+      letter-spacing: 0.8px; text-transform: uppercase; padding: 2px 10px; border-radius: 20px;
+    }
+    .badge.pending { background: #f0e6c8; color: #7a5f18; border: 1px solid #dcc98f; }
+    .badge.ok { background: #dbe8d9; color: var(--green-deep); border: 1px solid #b5cdb4; }
+    .btn {
+      font-family: var(--sans); font-size: 14px; font-weight: 600; letter-spacing: 0.4px;
+      padding: 10px 22px; border-radius: 3px; border: 1px solid transparent; cursor: pointer;
+      text-decoration: none; display: inline-block;
+    }
+    .btn-primary { background: var(--green); color: #fdfbf4; border-color: var(--green-deep); }
+    .btn-primary:hover { background: var(--green-deep); }
+    .btn-danger { background: transparent; color: var(--terra); border-color: var(--terra); }
+    .btn-danger:hover { background: var(--terra-soft); }
+    .btn-quiet { background: transparent; color: var(--muted); border-color: var(--line); }
+    .btn-quiet:hover { border-color: var(--muted); }
+    label {
+      display: block; font-family: var(--sans); font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 5px;
+    }
+    input[type="text"], input[type="date"] {
+      width: 100%; padding: 8px 10px; font-family: var(--mono); font-size: 14px;
+      color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 3px;
+    }
+    input:focus { outline: 2px solid rgba(46, 85, 57, 0.35); border-color: var(--green); }
+    .field-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 20px; }
+    .alert {
+      background: var(--terra-soft); border: 1px solid var(--terra); color: var(--terra);
+      border-radius: 3px; padding: 12px 16px; margin-bottom: 20px; font-family: var(--sans); font-size: 14px;
+    }
+    .empty { color: var(--muted); font-style: italic; padding: 28px 0; text-align: center; }
+    footer {
+      max-width: 1080px; margin: 0 auto; padding: 0 24px 32px;
+      font-family: var(--sans); font-size: 12px; color: var(--muted); letter-spacing: 0.3px;
+    }
+    footer::before { content: ""; display: block; border-top: 1px solid var(--line); margin-bottom: 12px; }
+    {% block extra_css %}{% endblock %}
+  </style>
+</head>
+<body hx-boost="true">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><b>Atel<span style="color: var(--gold);">IA</span></b><small>Conserverie du Sud · atelier factures</small></div>
+      <nav>
+        <a href="/invoices" class="{% if active == 'invoices' %}active{% endif %}">Factures</a>
+        <a href="/dashboard" class="{% if active == 'dashboard' %}active{% endif %}">Gains</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    POC — données 100 % synthétiques · extraction Factur-X déterministe · aucune écriture sans validation d'un opérateur
+  </footer>
+</body>
+</html>

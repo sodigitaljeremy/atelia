@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Gains — AtelIA{% endblock %}
+{% block extra_css %}
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .stat .stat-label { font-family: var(--sans); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.4px; color: var(--muted); }
+    .stat .stat-value { font-family: var(--mono); font-size: 40px; font-variant-numeric: tabular-nums; margin: 6px 0 2px; color: var(--green-deep); }
+    .stat .stat-note { font-family: var(--sans); font-size: 12.5px; color: var(--muted); }
+    .stat.accent { border-left: 4px solid var(--gold); }
+{% endblock %}
+{% block content %}
+  <h1>Gains du traitement automatisé</h1>
+  <p class="subtitle">Calculés uniquement sur les factures <b>validées par un opérateur</b>.</p>
+
+  <div class="stats">
+    <div class="card stat accent">
+      <div class="stat-label">Heures économisées</div>
+      <div class="stat-value">{{ metrics.hours_saved | qty }} h</div>
+      <div class="stat-note">vs saisie manuelle ≈ {{ metrics.minutes_per_invoice }} min/facture</div>
+    </div>
+    <div class="card stat accent">
+      <div class="stat-label">Coût évité</div>
+      <div class="stat-value">{{ metrics.cost_avoided_eur | eur }}</div>
+      <div class="stat-note">réf. ≈ {{ metrics.cost_per_invoice_eur }} € par facture papier</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">Factures validées</div>
+      <div class="stat-value">{{ metrics.validated }}</div>
+      <div class="stat-note">{{ metrics.rejected }} rejetée(s)</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">En attente</div>
+      <div class="stat-value">{{ metrics.pending }}</div>
+      <div class="stat-note"><a class="row-link" href="/invoices">ouvrir la file de validation →</a></div>
+    </div>
+  </div>
+{% endblock %}

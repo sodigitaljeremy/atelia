@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Factures en validation — AtelIA{% endblock %}
+{% block content %}
+  <h1>Factures fournisseurs</h1>
+  <p class="subtitle">File d'attente de validation — rien n'est comptabilisé sans votre accord.</p>
+
+  {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+  <div class="card" style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+    <form action="/invoices/upload" method="post" enctype="multipart/form-data"
+          style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+      <div>
+        <label for="file">Déposer une facture Factur-X (PDF)</label>
+        <input type="file" id="file" name="file" accept="application/pdf" required
+               style="font-family: var(--sans); font-size: 13px;">
+      </div>
+      <button type="submit" class="btn btn-primary">Ingérer</button>
+    </form>
+    <span style="margin-left: auto;" class="badge pending">{{ pending | length }} en attente</span>
+  </div>
+
+  <h2>À contrôler</h2>
+  <div class="card" style="padding: 8px 16px;">
+    {% if pending %}
+      <table>
+        <thead>
+          <tr>
+            <th>N° facture</th>
+            <th>Fournisseur</th>
+            <th>SIREN</th>
+            <th>Émise le</th>
+            <th>Échéance</th>
+            <th class="num">Total TTC</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in pending %}
+            <tr>
+              <td class="mono">{{ inv.invoice_number or "—" }}</td>
+              <td>{{ inv.supplier_name or "—" }}</td>
+              <td class="mono">{{ inv.supplier_siren or "—" }}</td>
+              <td class="mono">{{ inv.issue_date or "—" }}</td>
+              <td class="mono">{{ inv.due_date or "—" }}</td>
+              <td class="num mono">{{ inv.total_ttc | eur }}</td>
+              <td style="text-align: right;"><a class="row-link" href="/invoices/{{ inv.id }}">Contrôler →</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">Aucune facture en attente — déposez un PDF Factur-X ci-dessus.</p>
+    {% endif %}
+  </div>
+{% endblock %}

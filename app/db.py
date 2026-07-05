@@ -1,16 +1,21 @@
+from pathlib import Path
+
 import asyncpg
 
 from app.config import settings
+
+SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 pool: asyncpg.Pool | None = None
 
 
 async def connect() -> None:
-    """Ouvre le pool et active pgvector (idempotent)."""
+    """Ouvre le pool, active pgvector et applique le schéma (idempotent)."""
     global pool
     pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=5)
     async with pool.acquire() as conn:
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        await conn.execute(SCHEMA_PATH.read_text())
 
 
 async def disconnect() -> None:
