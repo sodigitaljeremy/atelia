@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app import repository, services
@@ -66,6 +66,14 @@ async def invoices_list(request: Request, error: str | None = None):
             "active": "invoices",
         },
     )
+
+
+@router.get("/samples/{filename}")
+async def sample_download(filename: str):
+    """Téléchargement forcé d'une facture d'exemple (Content-Disposition: attachment)."""
+    if filename not in {p.name for p in Path("samples").glob("*.pdf")}:
+        raise HTTPException(status_code=404, detail="Exemple introuvable")
+    return FileResponse(Path("samples") / filename, media_type="application/pdf", filename=filename)
 
 
 @router.post("/invoices/upload")
