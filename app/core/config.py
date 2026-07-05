@@ -10,9 +10,14 @@ class Settings(BaseSettings):
     # PME fictive incarnée par la plateforme (ADR-102) — unique source du nom, utilisée partout
     company_name: str = "Conserverie du Val"
 
-    # Hypothèses de gain du module Factures — PARAMÉTRABLES (affichées comme telles dans l'UI)
+    # Hypothèses de gain du module Factures — PARAMÉTRABLES (affichées comme telles dans l'UI).
+    # 15 € : ordre de grandeur France Num pour une facture papier entrante (IGF/DGFiP : 14-20 €).
     minutes_saved_per_invoice: int = 5
-    cost_avoided_per_invoice_eur: int = 26
+    cost_avoided_per_invoice_eur: int = 15
+
+    # Mode démo : active les actions destructives de démonstration (reset). À passer
+    # à false en prod le jour où la plateforme ne doit plus être réinitialisable.
+    demo_mode: bool = True
 
     # Modèles derrière LiteLLM — swappables vers Claude par simple changement de valeur (ADR-001)
     llm_model: str = "mistral/mistral-large-latest"

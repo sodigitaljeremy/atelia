@@ -41,3 +41,24 @@ def test_point_unique_reste_visible():
     series = gains.cumulative_series([(date(2026, 7, 6), Decimal("26"))])
     points = gains.svg_polyline_points(series).split()
     assert len(points) == 2  # doublé → segment horizontal visible
+
+
+# --- Simulateur ---------------------------------------------------------------
+
+
+def test_clamp_des_curseurs():
+    assert gains.clamp_rates(2, 5) == (2, 5)
+    assert gains.clamp_rates(30, 25) == (30, 25)
+    assert gains.clamp_rates(0, 0) == (gains.MIN_MINUTES, gains.MIN_COST)
+    assert gains.clamp_rates(999, 999) == (gains.MAX_MINUTES, gains.MAX_COST)
+
+
+def test_projection_calcule_sans_rien_ecrire():
+    # Fonction PURE : n'accepte que des valeurs, ne peut pas toucher au journal.
+    sim = gains.projection(events_count=12, minutes=10, cost=20)
+    assert sim == {"count": 12, "hours": Decimal("2.00"), "cost": 240}
+
+
+def test_projection_a_zero_validation():
+    sim = gains.projection(events_count=0, minutes=30, cost=25)
+    assert sim["cost"] == 0 and sim["hours"] == Decimal("0.00")

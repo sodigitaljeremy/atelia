@@ -52,3 +52,13 @@ CREATE TABLE IF NOT EXISTS gain_event (
     created_at        TIMESTAMPTZ   NOT NULL DEFAULT now(),
     UNIQUE (invoice_id)
 );
+
+-- Slice 4 : réglages runtime du module (clé/valeur). Le tarif appliqué ici ne vaut
+-- que pour les PROCHAINES validations : les gain_event passés sont IMMUABLES
+-- (append-only, jamais recalculés — chaque événement garde le tarif en vigueur
+-- à sa validation, le total reste une somme fidèle et auditable).
+CREATE TABLE IF NOT EXISTS settings_runtime (
+    key        TEXT PRIMARY KEY,
+    value      TEXT        NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

@@ -9,7 +9,7 @@ from app.modules.invoices.router import router
 MODULE = Module(
     slug="invoices",
     titre="Factures fournisseurs",
-    probleme="Éliminer la saisie manuelle des factures (~26 € et 5 min par facture papier).",
+    probleme="Éliminer la saisie manuelle des factures (~15 € et 5 min par facture papier).",
     technique="Extraction déterministe Factur-X + human-in-the-loop",
     icone="🧾",
     router=router,

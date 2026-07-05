@@ -1,0 +1,8 @@
+<div class="card stat" style="border-left: 4px solid var(--gold); margin-top: 14px;">
+  <div class="stat-label">Simulation — projection</div>
+  <div class="stat-value" style="font-size: 28px;">{{ sim.cost | eur }} · {{ sim.hours | qty }} h</div>
+  <div class="stat-note">
+    {{ sim.count }} validation(s) actée(s) × {{ sim_cost }} € et {{ sim_minutes }} min/facture.
+    <b>Projection à la volée — rien n'est enregistré</b>, le journal des gains réels reste intact.
+  </div>
+</div>

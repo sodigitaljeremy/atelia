@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 
+from app.core.config import settings
 from app.core.templates import module_templates
 from app.modules.invoices import checks, gains, repository, services
 from app.modules.invoices.extraction import ExtractionError
@@ -149,6 +150,9 @@ async def dashboard(request: Request):
     history = await repository.gains_history()
     daily = [(row["day"], row["cost"]) for row in await repository.gains_timeline()]
     series = gains.cumulative_series(daily)
+    sim = gains.projection(
+        metrics["gain_events"], metrics["minutes_per_invoice"], metrics["cost_per_invoice_eur"]
+    )
     return templates.TemplateResponse(
         request,
         "dashboard.html",
@@ -159,9 +163,45 @@ async def dashboard(request: Request):
             "svg_points": gains.svg_polyline_points(series),
             "svg_width": gains.SVG_WIDTH,
             "svg_height": gains.SVG_HEIGHT,
+            "sim": sim,
+            "sim_minutes": metrics["minutes_per_invoice"],
+            "sim_cost": metrics["cost_per_invoice_eur"],
+            "demo_mode": settings.demo_mode,
             "active": "dashboard",
         },
     )
+
+
+@ui.post("/dashboard/simulate")
+async def dashboard_simulate(request: Request, minutes: int = Form(...), cost: int = Form(...)):
+    """Fragment HTMX : PROJECTION à la volée — aucune écriture, gain_event intact."""
+    minutes, cost = gains.clamp_rates(minutes, cost)
+    metrics = await repository.gains_metrics()
+    sim = gains.projection(metrics["gain_events"], minutes, cost)
+    return templates.TemplateResponse(
+        request,
+        "_simulation.html",
+        {"sim": sim, "sim_minutes": minutes, "sim_cost": cost},
+    )
+
+
+@ui.post("/dashboard/apply-rates")
+async def dashboard_apply_rates(minutes: int = Form(...), cost: int = Form(...)):
+    """Persiste le tarif des PROCHAINES validations — ne recalcule jamais le passé."""
+    minutes, cost = gains.clamp_rates(minutes, cost)
+    await repository.set_rates(minutes, cost)
+    return RedirectResponse("/dashboard", status_code=303)
+
+
+@ui.post("/dashboard/reset")
+async def dashboard_reset(confirm_reset: str = Form("")):
+    """Reset démo — destructif, doublement gardé : demo_mode + confirmation explicite."""
+    if not settings.demo_mode:
+        raise HTTPException(status_code=404, detail="Introuvable")
+    if not confirm_reset:
+        raise HTTPException(status_code=400, detail="Confirmation explicite requise")
+    await repository.reset_demo()
+    return RedirectResponse("/dashboard", status_code=303)
 
 
 # --- API JSON — le point d'entrée « prêt à brancher sur votre ERP » ---------

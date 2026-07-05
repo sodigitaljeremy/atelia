@@ -15,11 +15,14 @@
   </p>
 
   <div class="alert" style="background: #f0e6c8; border-color: #dcc98f; color: #7a5f18;">
-    Hypothèses <b>paramétrables</b> : {{ metrics.minutes_per_invoice }} min et
-    {{ metrics.cost_per_invoice_eur }} € économisés par facture évitée
-    (variables de configuration <span class="mono">MINUTES_SAVED_PER_INVOICE</span> /
-    <span class="mono">COST_AVOIDED_PER_INVOICE_EUR</span>) — à calibrer sur votre réalité terrain.
+    Hypothèses <b>paramétrables</b> — tarif courant : {{ metrics.minutes_per_invoice }} min et
+    {{ metrics.cost_per_invoice_eur }} € par facture évitée. <b>Estimation à calibrer</b> sur votre
+    réalité terrain ; ordres de grandeur publics : ~15 € par facture papier entrante
+    (France Num), fourchette 14–20 € (rapport IGF/DGFiP sur la facturation électronique).
+    Ajustez avec le simulateur ci-dessous.
   </div>
+
+  <h2>Gains réels actés</h2>
 
   <div class="stats">
     <div class="card stat accent">
@@ -52,6 +55,35 @@
       <div class="stat-value">{{ metrics.duplicates_flagged }}</div>
       <div class="stat-note">même fournisseur + même n° — double saisie évitée</div>
     </div>
+  </div>
+
+  <h2>Simulateur — et si vos coûts réels étaient différents ?</h2>
+  <div class="card">
+    <form action="/dashboard/apply-rates" method="post"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 28px; align-items: end;">
+      <div>
+        <label for="sim-cost">Coût évité par facture : 5–25 €</label>
+        <input type="range" id="sim-cost" name="cost" min="5" max="25" step="1"
+               value="{{ sim_cost }}" style="width: 100%;"
+               hx-post="/dashboard/simulate" hx-trigger="input delay:150ms"
+               hx-include="closest form" hx-target="#simulation">
+      </div>
+      <div>
+        <label for="sim-minutes">Minutes de saisie par facture : 2–30</label>
+        <input type="range" id="sim-minutes" name="minutes" min="2" max="30" step="1"
+               value="{{ sim_minutes }}" style="width: 100%;"
+               hx-post="/dashboard/simulate" hx-trigger="input delay:150ms"
+               hx-include="closest form" hx-target="#simulation">
+      </div>
+      <div style="grid-column: span 2;">
+        <button type="submit" class="btn btn-quiet">Appliquer comme tarif par défaut</button>
+        <span style="font-family: var(--sans); font-size: 12px; color: var(--muted); margin-left: 10px;">
+          Ne vaut que pour les <b>prochaines</b> validations — les gains déjà actés ne sont
+          jamais recalculés (journal immuable).
+        </span>
+      </div>
+    </form>
+    <div id="simulation">{% include "_simulation.html" %}</div>
   </div>
 
   {% if series %}
@@ -111,4 +143,21 @@
       </tr>
     </table>
   </div>
+
+  {% if demo_mode %}
+    <h2 style="color: var(--terra);">Zone démo</h2>
+    <div class="card" style="border-color: var(--terra);">
+      <form action="/dashboard/reset" method="post"
+            style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <label style="display: flex; align-items: center; gap: 8px; text-transform: none;
+                      font-size: 13.5px; letter-spacing: 0; color: var(--terra); cursor: pointer; margin: 0;">
+          <input type="checkbox" name="confirm_reset" value="oui" required
+                 style="width: 15px; height: 15px;">
+          Je confirme la suppression de toutes les factures et de tout l'historique
+          de gains du module Factures (irréversible).
+        </label>
+        <button type="submit" class="btn btn-danger">Réinitialiser la démo</button>
+      </form>
+    </div>
+  {% endif %}
 {% endblock %}

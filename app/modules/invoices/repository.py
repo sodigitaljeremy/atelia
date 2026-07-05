@@ -149,8 +149,49 @@ async def set_status(invoice_id: int, status: str, header_updates: dict | None =
     return result == "UPDATE 1"
 
 
+RATE_KEYS = ("minutes_saved_per_invoice", "cost_avoided_per_invoice_eur")
+
+
+async def get_rates() -> dict:
+    """Tarif courant : settings_runtime si réglé, sinon les défauts de la config.
+
+    Ne vaut que pour les PROCHAINES validations — jamais appliqué rétroactivement.
+    """
+    async with db.pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT key, value FROM settings_runtime WHERE key = ANY($1)", list(RATE_KEYS)
+        )
+    values = {row["key"]: row["value"] for row in rows}
+    return {
+        "minutes": int(values.get("minutes_saved_per_invoice", settings.minutes_saved_per_invoice)),
+        "cost": int(
+            values.get("cost_avoided_per_invoice_eur", settings.cost_avoided_per_invoice_eur)
+        ),
+    }
+
+
+async def set_rates(minutes: int, cost: int) -> None:
+    """Persiste le tarif par défaut des prochaines validations (idempotent)."""
+    async with db.pool.acquire() as conn:
+        await conn.executemany(
+            """
+            INSERT INTO settings_runtime (key, value) VALUES ($1, $2)
+            ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()
+            """,
+            [
+                ("minutes_saved_per_invoice", str(minutes)),
+                ("cost_avoided_per_invoice_eur", str(cost)),
+            ],
+        )
+
+
 async def record_gain(invoice_id: int) -> None:
-    """Acte le gain d'une validation dans le journal append-only (une seule fois par facture)."""
+    """Acte le gain d'une validation dans le journal append-only (une seule fois par facture).
+
+    Le tarif est figé DANS l'événement au moment de la validation : changer le tarif
+    ensuite ne recalcule jamais le passé (auditabilité — la somme reste fidèle).
+    """
+    rates = await get_rates()
     async with db.pool.acquire() as conn:
         await conn.execute(
             """
@@ -159,8 +200,8 @@ async def record_gain(invoice_id: int) -> None:
             ON CONFLICT (invoice_id) DO NOTHING
             """,
             invoice_id,
-            settings.minutes_saved_per_invoice,
-            settings.cost_avoided_per_invoice_eur,
+            rates["minutes"],
+            rates["cost"],
         )
 
 
@@ -170,6 +211,7 @@ async def backfill_gain_events() -> None:
     `created_at` reprend `updated_at` de la facture (≈ date de validation) pour
     garder un historique daté cohérent. Relançable sans doublonner (UNIQUE invoice_id).
     """
+    rates = await get_rates()
     async with db.pool.acquire() as conn:
         await conn.execute(
             """
@@ -177,9 +219,19 @@ async def backfill_gain_events() -> None:
             SELECT id, $1, $2, updated_at FROM invoice WHERE status = 'validee'
             ON CONFLICT (invoice_id) DO NOTHING
             """,
-            settings.minutes_saved_per_invoice,
-            settings.cost_avoided_per_invoice_eur,
+            rates["minutes"],
+            rates["cost"],
         )
+
+
+async def reset_demo() -> None:
+    """Vide les données de démo du module Factures — et UNIQUEMENT elles.
+
+    settings_runtime survit volontairement (le tarif réglé est une configuration,
+    pas une donnée de démo). Protégé en amont par settings.demo_mode + confirmation.
+    """
+    async with db.pool.acquire() as conn:
+        await conn.execute("TRUNCATE invoice, invoice_line, gain_event RESTART IDENTITY")
 
 
 async def gains_metrics() -> dict:
@@ -199,12 +251,15 @@ async def gains_metrics() -> dict:
         )
         gains = await conn.fetchrow(
             """
-            SELECT coalesce(sum(minutes_saved), 0)    AS minutes,
+            SELECT count(*)                           AS events,
+                   coalesce(sum(minutes_saved), 0)    AS minutes,
                    coalesce(sum(cost_avoided_eur), 0) AS cost
             FROM gain_event
             """
         )
+    rates = await get_rates()
     return {
+        "gain_events": gains["events"],
         "validated": row["validated"],
         "pending": row["pending"],
         "rejected": row["rejected"],
@@ -212,8 +267,8 @@ async def gains_metrics() -> dict:
         "duplicates_flagged": row["duplicates_flagged"],
         "hours_saved": (Decimal(gains["minutes"]) / 60).quantize(Decimal("0.01")),
         "cost_avoided_eur": gains["cost"],
-        "minutes_per_invoice": settings.minutes_saved_per_invoice,
-        "cost_per_invoice_eur": settings.cost_avoided_per_invoice_eur,
+        "minutes_per_invoice": rates["minutes"],
+        "cost_per_invoice_eur": rates["cost"],
     }
 
 
