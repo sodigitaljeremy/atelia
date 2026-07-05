@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 
 from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
@@ -53,10 +54,17 @@ async def home():
 async def invoices_list(request: Request, error: str | None = None):
     pending = await repository.list_invoices("en_validation")
     metrics = await repository.gains_metrics()
+    samples = sorted(p.name for p in Path("samples").glob("*.pdf"))
     return templates.TemplateResponse(
         request,
         "invoices_list.html",
-        {"pending": pending, "metrics": metrics, "error": error, "active": "invoices"},
+        {
+            "pending": pending,
+            "metrics": metrics,
+            "error": error,
+            "samples": samples,
+            "active": "invoices",
+        },
     )
 
 

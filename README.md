@@ -11,9 +11,13 @@ FastAPI · PostgreSQL + pgvector · LiteLLM → Mistral (`mistral-large`, `mistr
 ## Lancement
 
 ```bash
-cp .env.example .env   # puis renseigner MISTRAL_API_KEY
+cp .env.example .env   # puis renseigner MISTRAL_API_KEY et POSTGRES_PASSWORD
 docker compose up --build
 ```
+
+En local, `docker-compose.override.yml` (chargé automatiquement) publie le port
+8000 vers l'hôte ; le fichier de base n'expose aucun port, c'est le reverse
+proxy qui s'en charge en prod.
 
 Vérifier :
 
@@ -32,6 +36,24 @@ Des factures Factur-X synthétiques (profil EN 16931) sont fournies dans `sample
 4. Le dashboard http://localhost:8000/dashboard affiche le gain (≈ 5 min et 26 € économisés par facture validée)
 
 Ingestion côté ERP : `curl -F "file=@samples/<facture>.pdf" http://localhost:8000/api/invoices`
+
+## Déploiement Coolify
+
+1. Créer une ressource **Docker Compose** pointant sur ce dépôt (fichier :
+   `docker-compose.yml` — l'override local n'est pas chargé, l'API ne publie
+   donc aucun port hôte).
+2. Définir les variables d'environnement :
+   - `MISTRAL_API_KEY` (requis)
+   - `POSTGRES_PASSWORD` (requis — valeur forte, le compose refuse de démarrer sans)
+   - `LLM_MODEL` / `EMBED_MODEL` (optionnels, valeurs par défaut dans `.env.example`)
+3. Exposer le service **`api`** sur son port interne **8000** (Traefik/Coolify
+   gère le domaine et le TLS). Postgres reste interne au réseau compose,
+   jamais publié.
+4. Le service `api` a un healthcheck compose sur `/health` (API + Postgres +
+   pgvector) : Coolify ne bascule le trafic que lorsqu'il passe au vert.
+5. Les données Postgres persistent dans le volume `pgdata` ; les factures
+   d'exemple sont embarquées dans l'image et téléchargeables depuis la page
+   d'accueil pour tester la démo.
 
 ## État d'avancement (tranches verticales)
 

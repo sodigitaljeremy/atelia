@@ -1,0 +1,7 @@
+# Dev local uniquement — chargé automatiquement par `docker compose up`.
+# En prod, Coolify lance explicitement `-f docker-compose.yml` et ignore ce fichier :
+# l'API n'y publie aucun port hôte, Traefik expose le port interne 8000.
+services:
+  api:
+    ports:
+      - "8000:8000"
