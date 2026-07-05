@@ -64,13 +64,9 @@ def extract_invoice(pdf_bytes: bytes) -> dict:
     root = etree.fromstring(xml_bytes)
 
     guideline = _text(root, "//ram:GuidelineSpecifiedDocumentContextParameter/ram:ID") or ""
-    seller = root.xpath(
-        "//ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty", namespaces=NS
-    )
+    seller = root.xpath("//ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty", namespaces=NS)
     seller = seller[0] if seller else root
-    summation = root.xpath(
-        "//ram:SpecifiedTradeSettlementHeaderMonetarySummation", namespaces=NS
-    )
+    summation = root.xpath("//ram:SpecifiedTradeSettlementHeaderMonetarySummation", namespaces=NS)
     summation = summation[0] if summation else root
 
     header = {

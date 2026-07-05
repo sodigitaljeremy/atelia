@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}AtelIA — atelier IA de {{ company_name }}{% endblock %}
+{% block extra_css %}
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .tile { display: block; text-decoration: none; color: var(--ink); transition: box-shadow 0.15s; }
+    .tile:hover { box-shadow: 0 3px 10px rgba(36, 40, 30, 0.12); }
+    .tile .tile-icon { font-size: 28px; }
+    .tile h3 { font-size: 20px; font-weight: 600; margin: 10px 0 6px; }
+    .tile p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
+    .tile .open { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--green); margin-top: 12px; display: inline-block; }
+{% endblock %}
+{% block content %}
+  <h1>L'atelier IA de {{ company_name }}</h1>
+  <p class="subtitle">
+    Une PME agroalimentaire fictive, de vrais problèmes métier — et pour chacun,
+    la bonne technique d'IA, démontrée sur pièce.
+  </p>
+
+  <h2>Cas d'usage</h2>
+  <div class="tiles">
+    {% for module in nav_modules %}
+      <a class="card tile" href="/{{ module.slug }}">
+        <span class="tile-icon">{{ module.icone }}</span>
+        <h3>{{ module.titre }}</h3>
+        <p>{{ module.probleme }}</p>
+        <span class="badge ok">{{ module.technique }}</span>
+        <br><span class="open">Ouvrir le module →</span>
+      </a>
+    {% endfor %}
+  </div>
+
+  <h2>La démarche</h2>
+  <div class="card">
+    <p>
+      Pas de LLM plaqué partout : chaque module choisit l'approche adaptée à son problème —
+      déterministe quand c'est fiable, IA quand elle apporte quelque chose, contrôle humain
+      dès qu'une décision engage. <a class="row-link" href="/about">Lire la démarche →</a>
+    </p>
+  </div>
+{% endblock %}

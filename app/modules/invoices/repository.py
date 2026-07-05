@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import asyncpg
 
-from app import db
+from app.core import db
 
 # Hypothèses de gain affichées sur le dashboard (réf. brief : ~26 €/facture papier)
 MINUTES_SAVED_PER_INVOICE = 5

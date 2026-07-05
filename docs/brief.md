@@ -1,4 +1,4 @@
-# Brief projet — POC AI Engineer · Conserverie du Sud
+# Brief projet — POC AI Engineer · Conserverie du Val
 
 > Document de cadrage destiné à l'implémentation (trio : Jérémy = décision, Claude = conseil/spec, Claude Code = implémentation).
 > Nom de travail : **AtelIA** (atelier IA de la conserverie) — à renommer librement.
@@ -7,7 +7,7 @@
 
 ## 1. Pourquoi ce projet
 
-Candidature au poste **Forward Deployed Engineer** chez la Conserverie du Sud (Jean Brunet, Rabastens-de-Bigorre, 65140) — PME agroalimentaire ~40 salariés, clients GMS, en pleine transformation IA/automatisation.
+Candidature au poste **Forward Deployed Engineer** dans une PME agroalimentaire (anonymisée ici en « Conserverie du Val », fictive) — PME agroalimentaire ~40 salariés, clients GMS, en pleine transformation IA/automatisation.
 
 **Objectif du POC** : démontrer, sur leur terrain métier, qu'on sait livrer un système IA *en production, documenté, souverain*, avec le bon outil pour le bon problème — et pas une démo générique.
 

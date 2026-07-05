@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Démarche — AtelIA{% endblock %}
+{% block content %}
+  <h1>La démarche</h1>
+  <p class="subtitle">Ce que cette plateforme cherche à prouver, et comment.</p>
+
+  <h2>La bonne technique pour chaque problème</h2>
+  <div class="card">
+    <p>
+      Intégrer l'IA en entreprise, ce n'est pas brancher un chatbot sur tout. C'est diagnostiquer
+      un besoin métier et choisir l'approche qui le résout au juste coût : <b>déterministe</b>
+      quand la donnée est structurée et fiable (aucun LLM là où il n'apporte rien), les techniques
+      d'IA — recherche documentaire, orchestration, classification — là où elles créent
+      réellement de la valeur. Chaque module de cet atelier incarne un problème concret de
+      {{ company_name }} et la technique qui lui répond.
+    </p>
+  </div>
+
+  <h2>Stack souveraine</h2>
+  <div class="card">
+    <p>
+      Modèles <b>Mistral</b> par défaut (souveraineté européenne), hébergement self-hosté.
+      Tous les appels passent par une couche LLM agnostique (LiteLLM) : changer de fournisseur
+      — par exemple vers Claude — est une ligne de configuration, pas une réécriture.
+    </p>
+  </div>
+
+  <h2>Données publiques et synthétiques uniquement</h2>
+  <div class="card">
+    <p>
+      {{ company_name }} est une <b>PME fictive</b>. Les données sont soit publiques
+      (API et textes officiels), soit synthétiques (factures Factur-X générées).
+      Aucune donnée privée réelle, aucune entreprise réelle nommée.
+    </p>
+  </div>
+
+  <h2>Contrôle humain</h2>
+  <div class="card">
+    <p>
+      Aucune écriture ni décision engageante sans validation d'un opérateur. L'IA prépare,
+      l'humain tranche — et le système mesure les gains sur ce qui est effectivement validé.
+    </p>
+  </div>
+{% endblock %}

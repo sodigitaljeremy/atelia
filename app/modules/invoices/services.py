@@ -1,7 +1,7 @@
 """Services partagés entre l'API JSON et l'UI."""
 
-from app import repository
-from app.extraction import extract_invoice
+from app.modules.invoices import repository
+from app.modules.invoices.extraction import extract_invoice
 
 
 async def ingest_pdf(pdf_bytes: bytes) -> int:

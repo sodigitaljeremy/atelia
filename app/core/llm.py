@@ -9,7 +9,7 @@ import time
 
 from litellm import acompletion, aembedding
 
-from app.config import settings
+from app.core.config import settings
 
 
 async def complete(prompt: str, max_tokens: int = 64) -> dict:

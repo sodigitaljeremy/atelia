@@ -1,4 +1,4 @@
-"""Écrans opérateur (Jinja2 + HTMX) : validation humaine et dashboard de gains."""
+"""Routes du module Factures : écrans opérateur (Jinja2 + HTMX) et API JSON « prête ERP »."""
 
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -6,30 +6,19 @@ from pathlib import Path
 
 from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 
-from app import repository, services
-from app.extraction import ExtractionError
+from app.core.templates import module_templates
+from app.modules.invoices import repository, services
+from app.modules.invoices.extraction import ExtractionError
 
-router = APIRouter(include_in_schema=False)
-templates = Jinja2Templates(directory="templates")
+templates = module_templates(Path(__file__).parent / "templates")
 
-
-def _fmt_eur(value) -> str:
-    if value is None:
-        return "—"
-    return f"{value:,.2f}".replace(",", " ").replace(".", ",") + " €"
+router = APIRouter()
+ui = APIRouter(include_in_schema=False)
+api = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
 
-def _fmt_qty(value) -> str:
-    if value is None:
-        return "—"
-    text = f"{value:.3f}".rstrip("0").rstrip(".")
-    return text.replace(".", ",")
-
-
-templates.env.filters["eur"] = _fmt_eur
-templates.env.filters["qty"] = _fmt_qty
+# --- Écrans opérateur -------------------------------------------------------
 
 
 def _to_date(value: str | None):
@@ -45,12 +34,7 @@ def _to_decimal(value: str | None):
         raise HTTPException(status_code=400, detail=f"Montant invalide : {value}") from exc
 
 
-@router.get("/")
-async def home():
-    return RedirectResponse("/invoices")
-
-
-@router.get("/invoices")
+@ui.get("/invoices")
 async def invoices_list(request: Request, error: str | None = None):
     pending = await repository.list_invoices("en_validation")
     metrics = await repository.gains_metrics()
@@ -68,7 +52,7 @@ async def invoices_list(request: Request, error: str | None = None):
     )
 
 
-@router.get("/samples/{filename}")
+@ui.get("/samples/{filename}")
 async def sample_download(filename: str):
     """Téléchargement forcé d'une facture d'exemple (Content-Disposition: attachment)."""
     if filename not in {p.name for p in Path("samples").glob("*.pdf")}:
@@ -76,7 +60,7 @@ async def sample_download(filename: str):
     return FileResponse(Path("samples") / filename, media_type="application/pdf", filename=filename)
 
 
-@router.post("/invoices/upload")
+@ui.post("/invoices/upload")
 async def invoices_upload(file: UploadFile):
     pdf_bytes = await file.read()
     try:
@@ -86,7 +70,7 @@ async def invoices_upload(file: UploadFile):
     return RedirectResponse(f"/invoices/{invoice_id}", status_code=303)
 
 
-@router.get("/invoices/{invoice_id}")
+@ui.get("/invoices/{invoice_id}")
 async def invoice_detail(request: Request, invoice_id: int):
     invoice = await repository.get_invoice(invoice_id)
     if invoice is None:
@@ -99,7 +83,7 @@ async def invoice_detail(request: Request, invoice_id: int):
     )
 
 
-@router.post("/invoices/{invoice_id}/validate")
+@ui.post("/invoices/{invoice_id}/validate")
 async def invoice_validate(
     invoice_id: int,
     supplier_name: str = Form(""),
@@ -129,16 +113,55 @@ async def invoice_validate(
     return RedirectResponse("/dashboard", status_code=303)
 
 
-@router.post("/invoices/{invoice_id}/reject")
+@ui.post("/invoices/{invoice_id}/reject")
 async def invoice_reject(invoice_id: int):
     if not await repository.set_status(invoice_id, "rejetee"):
         raise HTTPException(status_code=404, detail="Facture introuvable")
     return RedirectResponse("/invoices", status_code=303)
 
 
-@router.get("/dashboard")
+@ui.get("/dashboard")
 async def dashboard(request: Request):
     metrics = await repository.gains_metrics()
     return templates.TemplateResponse(
         request, "dashboard.html", {"metrics": metrics, "active": "dashboard"}
     )
+
+
+# --- API JSON — le point d'entrée « prêt à brancher sur votre ERP » ---------
+
+
+def _serialize(record) -> dict:
+    data = dict(record)
+    data.pop("raw_xml", None)
+    return data
+
+
+@api.post("", status_code=201)
+async def ingest_invoice(file: UploadFile):
+    pdf_bytes = await file.read()
+    try:
+        invoice_id = await services.ingest_pdf(pdf_bytes)
+    except ExtractionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    invoice = await repository.get_invoice(invoice_id)
+    lines = await repository.get_lines(invoice_id)
+    return {"invoice": _serialize(invoice), "lines": [dict(line) for line in lines]}
+
+
+@api.get("")
+async def list_invoices(status: str | None = None):
+    return [_serialize(record) for record in await repository.list_invoices(status)]
+
+
+@api.get("/{invoice_id}")
+async def get_invoice(invoice_id: int):
+    invoice = await repository.get_invoice(invoice_id)
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    lines = await repository.get_lines(invoice_id)
+    return {"invoice": _serialize(invoice), "lines": [dict(line) for line in lines]}
+
+
+router.include_router(ui)
+router.include_router(api)

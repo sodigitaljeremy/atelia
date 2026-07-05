@@ -1,7 +1,7 @@
 [project]
 name = "atelia"
 version = "0.1.0"
-description = "AtelIA — atelier IA de la Conserverie du Sud (POC facture électronique, souverain)"
+description = "AtelIA — atelier IA d'une PME agroalimentaire fictive — plateforme de démonstration AI Engineering, souveraine"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
@@ -18,4 +18,9 @@ dependencies = [
 [dependency-groups]
 dev = [
     "reportlab>=4.2",
+    "ruff>=0.15.20",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

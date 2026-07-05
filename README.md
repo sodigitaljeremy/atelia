@@ -1,6 +1,6 @@
 # AtelIA
 
-Atelier IA de la Conserverie du Sud — POC d'automatisation de la facture électronique, **souverain** (Mistral, self-hosté, données synthétiques/publiques uniquement).
+Atelier IA d'une PME agroalimentaire **fictive** (« Conserverie du Val ») — plateforme modulaire de démonstration AI Engineering, **souveraine** (Mistral, self-hosté, données synthétiques/publiques uniquement).
 
 Contexte complet : [docs/brief.md](docs/brief.md).
 

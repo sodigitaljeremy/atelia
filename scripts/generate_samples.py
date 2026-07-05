@@ -4,6 +4,7 @@ Fournisseurs food factices mais réalistes (verre, épices, emballages) — aucu
 donnée réelle (ADR-004). Lancement : uv run scripts/generate_samples.py
 """
 
+import sys
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from io import BytesIO
@@ -15,11 +16,14 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from app.core.config import settings  # noqa: E402 — la PME fictive vient de la config (ADR-102)
+
 SAMPLES_DIR = Path(__file__).parent.parent / "samples"
 
 BUYER = {
-    "name": "Conserverie du Sud",
-    "address": ("Zone artisanale du Marmajou", "65140", "Rabastens-de-Bigorre"),
+    "name": settings.company_name,
+    "address": ("Zone artisanale des Trois Vallées", "65000", "Val-d'Adour"),
 }
 
 # (désignation, quantité, code unité UN/ECE, prix unitaire HT, taux TVA %)
@@ -33,8 +37,20 @@ SUPPLIERS = [
         "number": "VSO-2026-0187",
         "issue": date(2026, 6, 12),
         "lines": [
-            ("Bocal verre 720 ml Twist-Off 82", Decimal("2400"), "H87", Decimal("0.42"), Decimal("20")),
-            ("Couvercle TO 82 pasteurisable, vernis alimentaire", Decimal("2400"), "H87", Decimal("0.11"), Decimal("20")),
+            (
+                "Bocal verre 720 ml Twist-Off 82",
+                Decimal("2400"),
+                "H87",
+                Decimal("0.42"),
+                Decimal("20"),
+            ),
+            (
+                "Couvercle TO 82 pasteurisable, vernis alimentaire",
+                Decimal("2400"),
+                "H87",
+                Decimal("0.11"),
+                Decimal("20"),
+            ),
             ("Palette Europe consignée", Decimal("4"), "H87", Decimal("18.50"), Decimal("20")),
         ],
     },
@@ -47,9 +63,27 @@ SUPPLIERS = [
         "number": "EO-2026-0912",
         "issue": date(2026, 6, 18),
         "lines": [
-            ("Piment d'Espelette AOP moulu, seau 1 kg", Decimal("6"), "KGM", Decimal("64.90"), Decimal("5.5")),
-            ("Poivre noir de Sarawak grains, sac 5 kg", Decimal("10"), "KGM", Decimal("21.40"), Decimal("5.5")),
-            ("Thym de garrigue séché, carton 2 kg", Decimal("8"), "KGM", Decimal("18.75"), Decimal("5.5")),
+            (
+                "Piment d'Espelette AOP moulu, seau 1 kg",
+                Decimal("6"),
+                "KGM",
+                Decimal("64.90"),
+                Decimal("5.5"),
+            ),
+            (
+                "Poivre noir de Sarawak grains, sac 5 kg",
+                Decimal("10"),
+                "KGM",
+                Decimal("21.40"),
+                Decimal("5.5"),
+            ),
+            (
+                "Thym de garrigue séché, carton 2 kg",
+                Decimal("8"),
+                "KGM",
+                Decimal("18.75"),
+                Decimal("5.5"),
+            ),
         ],
     },
     {
@@ -61,8 +95,20 @@ SUPPLIERS = [
         "number": "EB-2026-1204",
         "issue": date(2026, 6, 25),
         "lines": [
-            ("Caisse carton double cannelure 40x30x24", Decimal("500"), "H87", Decimal("0.86"), Decimal("20")),
-            ("Étiquette adhésive bobine 80x120 (x1000)", Decimal("12"), "H87", Decimal("34.00"), Decimal("20")),
+            (
+                "Caisse carton double cannelure 40x30x24",
+                Decimal("500"),
+                "H87",
+                Decimal("0.86"),
+                Decimal("20"),
+            ),
+            (
+                "Étiquette adhésive bobine 80x120 (x1000)",
+                Decimal("12"),
+                "H87",
+                Decimal("34.00"),
+                Decimal("20"),
+            ),
         ],
     },
 ]
@@ -79,7 +125,9 @@ def compute_totals(lines) -> dict:
     by_rate: dict[Decimal, Decimal] = {}
     for (_, _, _, _, rate), total in zip(lines, line_totals):
         by_rate[rate] = by_rate.get(rate, Decimal("0")) + total
-    taxes = {rate: (basis * rate / 100).quantize(CENT, ROUND_HALF_UP) for rate, basis in by_rate.items()}
+    taxes = {
+        rate: (basis * rate / 100).quantize(CENT, ROUND_HALF_UP) for rate, basis in by_rate.items()
+    }
     total_ht = sum(line_totals)
     total_vat = sum(taxes.values())
     return {
@@ -231,7 +279,13 @@ def build_pdf(supplier: dict, totals: dict, due: date) -> bytes:
 
     y -= 22 * mm
     pdf.setFont("Helvetica-Bold", 9)
-    for label, offset in (("Désignation", 0), ("Qté", 95), ("PU HT", 115), ("HT", 140), ("TVA", 162)):
+    for label, offset in (
+        ("Désignation", 0),
+        ("Qté", 95),
+        ("PU HT", 115),
+        ("HT", 140),
+        ("TVA", 162),
+    ):
         pdf.drawString(x + offset * mm, y, label)
     pdf.line(x, y - 2 * mm, width - 20 * mm, y - 2 * mm)
     pdf.setFont("Helvetica", 9)
@@ -256,7 +310,11 @@ def build_pdf(supplier: dict, totals: dict, due: date) -> bytes:
     pdf.drawRightString(width - 20 * mm, y - 15 * mm, f"{money(totals['ttc'])} €")
 
     pdf.setFont("Helvetica-Oblique", 7)
-    pdf.drawString(x, 15 * mm, "Document synthétique généré pour le POC AtelIA — ne constitue pas une facture réelle.")
+    pdf.drawString(
+        x,
+        15 * mm,
+        "Document synthétique généré pour le POC AtelIA — ne constitue pas une facture réelle.",
+    )
     pdf.showPage()
     pdf.save()
     return buffer.getvalue()

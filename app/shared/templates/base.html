@@ -114,10 +114,15 @@
 <body hx-boost="true">
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><b>Atel<span style="color: var(--gold);">IA</span></b><small>Conserverie du Sud · atelier factures</small></div>
+      <div class="brand"><b>Atel<span style="color: var(--gold);">IA</span></b><small>{{ company_name }} · atelier IA</small></div>
       <nav>
-        <a href="/invoices" class="{% if active == 'invoices' %}active{% endif %}">Factures</a>
-        <a href="/dashboard" class="{% if active == 'dashboard' %}active{% endif %}">Gains</a>
+        <a href="/" class="{% if active == 'home' %}active{% endif %}">Accueil</a>
+        {% for module in nav_modules %}
+          {% for label, url, key in module.nav %}
+            <a href="{{ url }}" class="{% if active == key %}active{% endif %}">{{ label }}</a>
+          {% endfor %}
+        {% endfor %}
+        <a href="/about" class="{% if active == 'about' %}active{% endif %}">Démarche</a>
       </nav>
     </div>
   </header>
@@ -125,7 +130,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer>
-    POC — données 100 % synthétiques · extraction Factur-X déterministe · aucune écriture sans validation d'un opérateur
+    {{ company_name }} est une PME fictive — données publiques et synthétiques uniquement · stack souveraine (Mistral) · aucune écriture sans validation d'un opérateur
   </footer>
 </body>
 </html>
