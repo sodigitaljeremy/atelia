@@ -32,5 +32,35 @@
       <div class="stat-value">{{ metrics.pending }}</div>
       <div class="stat-note"><a class="row-link" href="/invoices">ouvrir la file de validation →</a></div>
     </div>
+    <div class="card stat">
+      <div class="stat-label">Anomalies détectées</div>
+      <div class="stat-value">{{ metrics.anomalies_detected }}</div>
+      <div class="stat-note">contrôles déterministes à l'ingestion (totaux, TVA, dates)</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">Doublons signalés</div>
+      <div class="stat-value">{{ metrics.duplicates_flagged }}</div>
+      <div class="stat-note">même fournisseur + même n° — double saisie évitée</div>
+    </div>
+  </div>
+
+  <h2>Intégration ERP</h2>
+  <div class="card">
+    <p style="font-family: var(--sans); font-size: 14px; margin-bottom: 14px;">
+      L'API JSON est le point d'entrée « prêt à brancher » : votre ERP pousse les PDF
+      et récupère les factures <b>validées par un opérateur</b> — jamais les non contrôlées.
+    </p>
+    <table style="font-size: 13.5px;">
+      <tr>
+        <td style="white-space: nowrap;"><b>Exporter les validées</b></td>
+        <td class="mono">curl {{ request.base_url }}api/invoices?status=validee</td>
+        <td style="text-align: right;"><a class="row-link" href="/api/invoices?status=validee">essayer →</a></td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap;"><b>Pousser une facture</b></td>
+        <td class="mono">curl -F "file=@facture.pdf" {{ request.base_url }}api/invoices</td>
+        <td style="text-align: right;"><a class="row-link" href="/docs">API docs →</a></td>
+      </tr>
+    </table>
   </div>
 {% endblock %}

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 
 from app.core.templates import module_templates
-from app.modules.invoices import repository, services
+from app.modules.invoices import checks, repository, services
 from app.modules.invoices.extraction import ExtractionError
 
 templates = module_templates(Path(__file__).parent / "templates")
@@ -71,15 +71,22 @@ async def invoices_upload(file: UploadFile):
 
 
 @ui.get("/invoices/{invoice_id}")
-async def invoice_detail(request: Request, invoice_id: int):
+async def invoice_detail(request: Request, invoice_id: int, error: str | None = None):
     invoice = await repository.get_invoice(invoice_id)
     if invoice is None:
         raise HTTPException(status_code=404, detail="Facture introuvable")
+    invoice = repository.decode_checks(invoice)
     lines = await repository.get_lines(invoice_id)
     return templates.TemplateResponse(
         request,
         "invoice_detail.html",
-        {"invoice": invoice, "lines": lines, "active": "invoices"},
+        {
+            "invoice": invoice,
+            "lines": lines,
+            "error": error,
+            "has_blocking": checks.has_blocking(invoice["anomalies"]),
+            "active": "invoices",
+        },
     )
 
 
@@ -95,8 +102,22 @@ async def invoice_validate(
     total_ht: str = Form(""),
     total_vat: str = Form(""),
     total_ttc: str = Form(""),
+    confirm_blocking: str = Form(""),
 ):
-    """Applique les corrections de l'opérateur puis valide (contrôle humain, ADR-005)."""
+    """Applique les corrections de l'opérateur puis valide (contrôle humain, ADR-005).
+
+    Si la facture porte une anomalie bloquante (ou un doublon), la validation exige
+    une confirmation explicite — vérifiée ici côté serveur, pas seulement dans l'UI.
+    """
+    invoice = await repository.get_invoice(invoice_id)
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    if checks.has_blocking(repository.decode_checks(invoice)["anomalies"]) and not confirm_blocking:
+        return RedirectResponse(
+            f"/invoices/{invoice_id}?error=Cette facture porte un contrôle bloquant : "
+            "cochez la confirmation explicite pour pouvoir la valider.",
+            status_code=303,
+        )
     updates = {
         "supplier_name": supplier_name or None,
         "supplier_siren": supplier_siren or None,
@@ -132,7 +153,7 @@ async def dashboard(request: Request):
 
 
 def _serialize(record) -> dict:
-    data = dict(record)
+    data = repository.decode_checks(record)
     data.pop("raw_xml", None)
     return data
 

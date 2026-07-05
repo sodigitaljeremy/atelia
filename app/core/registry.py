@@ -40,4 +40,16 @@ def _discover() -> list[Module]:
     return sorted(found, key=lambda module: module.slug)
 
 
-modules: list[Module] = _discover()
+_modules: list[Module] | None = None
+
+
+def __getattr__(name: str):
+    # Découverte paresseuse (PEP 562) : `registry.modules` ne déclenche l'import des
+    # modules qu'au premier accès — jamais pendant l'import d'un module lui-même
+    # (sinon import circulaire, ex. tests important directement un sous-module).
+    if name == "modules":
+        global _modules
+        if _modules is None:
+            _modules = _discover()
+        return _modules
+    raise AttributeError(name)

@@ -34,3 +34,8 @@ CREATE TABLE IF NOT EXISTS invoice_line (
 
 CREATE INDEX IF NOT EXISTS idx_invoice_status ON invoice (status);
 CREATE INDEX IF NOT EXISTS idx_invoice_line_invoice ON invoice_line (invoice_id);
+
+-- Slice 2 : contrôles calculés à l'ingestion (anomalies, conformité, doublon)
+ALTER TABLE invoice ADD COLUMN IF NOT EXISTS anomalies    JSONB   NOT NULL DEFAULT '[]';
+ALTER TABLE invoice ADD COLUMN IF NOT EXISTS compliance   JSONB   NOT NULL DEFAULT '[]';
+ALTER TABLE invoice ADD COLUMN IF NOT EXISTS is_duplicate BOOLEAN NOT NULL DEFAULT false;

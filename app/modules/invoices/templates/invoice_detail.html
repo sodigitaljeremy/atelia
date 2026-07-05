@@ -9,6 +9,51 @@
     (confiance <span class="mono">{{ "%.0f" | format(invoice.confidence * 100) }} %</span>)
   </p>
 
+  {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+  <h2>Contrôles automatiques</h2>
+  <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 32px;">
+    <div>
+      {% if invoice.is_duplicate %}
+        <div class="alert" style="margin-bottom: 12px;">
+          ⚠ Doublon probable — une facture identique (même fournisseur, même numéro) existe déjà.
+        </div>
+      {% endif %}
+      {% if invoice.anomalies %}
+        <ul style="list-style: none; padding: 0; margin: 0; font-family: var(--sans); font-size: 14px;">
+          {% for a in invoice.anomalies %}
+            <li style="padding: 7px 10px; margin-bottom: 6px; border-radius: 3px; border-left: 4px solid
+                       {{ 'var(--terra)' if a.severity == 'bloquant' else 'var(--gold)' }};
+                       background: {{ 'var(--terra-soft)' if a.severity == 'bloquant' else '#f0e6c8' }};">
+              <span class="badge {{ 'pending' if a.severity == 'avertissement' else '' }}"
+                    style="{% if a.severity == 'bloquant' %}background: var(--terra); color: #fff; border: none;{% endif %}">
+                {{ a.severity }}</span>
+              {{ a.message }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p style="font-family: var(--sans); font-size: 14px; color: var(--green);">
+          ✓ Aucune anomalie détectée (totaux, TVA, dates, doublon).
+        </p>
+      {% endif %}
+    </div>
+    <div>
+      <label style="margin-bottom: 8px;">Mentions attendues — présence</label>
+      <ul style="list-style: none; padding: 0; margin: 0; font-family: var(--sans); font-size: 13.5px; columns: 2;">
+        {% for item in invoice.compliance %}
+          <li style="padding: 3px 0; color: {{ 'var(--green)' if item.present else 'var(--terra)' }};">
+            {{ "✓" if item.present else "✗" }} {{ item.label }}
+          </li>
+        {% endfor %}
+      </ul>
+      <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px;">
+        Vérification factuelle de la présence des champs extraits — ne constitue pas
+        un avis juridique de conformité.
+      </p>
+    </div>
+  </div>
+
   <form action="/invoices/{{ invoice.id }}/validate" method="post" id="validate-form">
     <h2>Entête — corrigez si besoin</h2>
     <div class="card">
@@ -76,6 +121,18 @@
         </tbody>
       </table>
     </div>
+
+    {% if has_blocking %}
+      <div class="card" style="margin-top: 20px; border-color: var(--terra); background: var(--terra-soft);">
+        <label style="display: flex; align-items: center; gap: 10px; text-transform: none;
+                      font-size: 14px; letter-spacing: 0; color: var(--terra); cursor: pointer;">
+          <input type="checkbox" name="confirm_blocking" value="oui" required
+                 style="width: 16px; height: 16px;">
+          Je confirme vouloir valider malgré les contrôles bloquants ci-dessus
+          (décision opérateur, tracée).
+        </label>
+      </div>
+    {% endif %}
 
     <div style="display: flex; gap: 14px; align-items: center; margin-top: 28px;">
       <button type="submit" class="btn btn-primary">✓ Valider et comptabiliser</button>

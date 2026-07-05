@@ -111,6 +111,33 @@ SUPPLIERS = [
             ),
         ],
     },
+    {
+        # Taux de TVA volontairement inhabituel (13 %) : XSD-valide, mais déclenche
+        # l'avertissement « tva_inhabituelle » des contrôles — pour la démo Slice 2.
+        "slug": "maraichers-adour",
+        "name": "Les Maraîchers de l'Adour SCA",
+        "siren": "428713946",
+        "vat": "FR21428713946",
+        "address": ("7 chemin des Saligues", "64100", "Bayonne"),
+        "number": "MA-2026-0455",
+        "issue": date(2026, 6, 28),
+        "lines": [
+            (
+                "Piquillos frais calibre 40+, caisse 10 kg",
+                Decimal("30"),
+                "KGM",
+                Decimal("3.85"),
+                Decimal("13"),
+            ),
+            (
+                "Oignons doux des Landes, sac 25 kg",
+                Decimal("8"),
+                "KGM",
+                Decimal("1.90"),
+                Decimal("13"),
+            ),
+        ],
+    },
 ]
 
 CENT = Decimal("0.01")

@@ -1,5 +1,6 @@
 """Requêtes SQL (asyncpg, sans ORM : 2 tables, mapping direct)."""
 
+import json
 from decimal import Decimal
 
 import asyncpg
@@ -23,16 +24,50 @@ HEADER_FIELDS = (
 )
 
 
-async def create_invoice(header: dict, lines: list[dict], raw_xml: str) -> int:
-    """Insère entête + lignes en une transaction, statut 'en_validation'. Retourne l'id."""
+def decode_checks(record) -> dict:
+    """Record asyncpg → dict avec les colonnes JSONB décodées (anomalies, compliance)."""
+    data = dict(record)
+    for field in ("anomalies", "compliance"):
+        if isinstance(data.get(field), str):
+            data[field] = json.loads(data[field])
+    return data
+
+
+async def find_duplicate(supplier_siren: str | None, invoice_number: str | None):
+    """Facture non rejetée portant le même SIREN + numéro (détection de doublon)."""
+    if not supplier_siren or not invoice_number:
+        return None
+    async with db.pool.acquire() as conn:
+        return await conn.fetchrow(
+            """
+            SELECT id, invoice_number FROM invoice
+            WHERE supplier_siren = $1 AND invoice_number = $2 AND status != 'rejetee'
+            ORDER BY id LIMIT 1
+            """,
+            supplier_siren,
+            invoice_number,
+        )
+
+
+async def create_invoice(
+    header: dict,
+    lines: list[dict],
+    raw_xml: str,
+    anomalies: list[dict] | None = None,
+    compliance: list[dict] | None = None,
+    is_duplicate: bool = False,
+) -> int:
+    """Insère entête + lignes + contrôles en une transaction, statut 'en_validation'."""
     async with db.pool.acquire() as conn:
         async with conn.transaction():
             invoice_id = await conn.fetchval(
                 """
                 INSERT INTO invoice (source, profile, supplier_name, supplier_siren,
                                      invoice_number, issue_date, due_date, currency,
-                                     total_ht, total_vat, total_ttc, confidence, raw_xml)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                                     total_ht, total_vat, total_ttc, confidence, raw_xml,
+                                     anomalies, compliance, is_duplicate)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                        $14::jsonb, $15::jsonb, $16)
                 RETURNING id
                 """,
                 header["source"],
@@ -48,6 +83,9 @@ async def create_invoice(header: dict, lines: list[dict], raw_xml: str) -> int:
                 header["total_ttc"],
                 header["confidence"],
                 raw_xml,
+                json.dumps(anomalies or []),
+                json.dumps(compliance or []),
+                is_duplicate,
             )
             await conn.executemany(
                 """
@@ -122,7 +160,9 @@ async def gains_metrics() -> dict:
             SELECT
                 count(*) FILTER (WHERE status = 'validee')       AS validated,
                 count(*) FILTER (WHERE status = 'en_validation') AS pending,
-                count(*) FILTER (WHERE status = 'rejetee')       AS rejected
+                count(*) FILTER (WHERE status = 'rejetee')       AS rejected,
+                coalesce(sum(jsonb_array_length(anomalies)), 0)  AS anomalies_detected,
+                count(*) FILTER (WHERE is_duplicate)             AS duplicates_flagged
             FROM invoice
             """
         )
@@ -131,6 +171,8 @@ async def gains_metrics() -> dict:
         "validated": validated,
         "pending": row["pending"],
         "rejected": row["rejected"],
+        "anomalies_detected": row["anomalies_detected"],
+        "duplicates_flagged": row["duplicates_flagged"],
         "hours_saved": (Decimal(validated * MINUTES_SAVED_PER_INVOICE) / 60).quantize(
             Decimal("0.01")
         ),
