@@ -1,0 +1,31 @@
+{% if error %}
+  <div class="alert">{{ error }}</div>
+{% elif not companies %}
+  <div class="card"><p class="empty">Aucune entreprise trouvée pour « {{ query }} ».</p></div>
+{% else %}
+  <h2>{{ companies | length }} résultat(s) pour « {{ query }} »</h2>
+  {% for c in companies %}
+    <div class="card" style="margin-bottom: 14px;">
+      <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;">
+        <h3 style="font-size: 19px; font-weight: 600;">{{ c.nom }}</h3>
+        <span class="badge {{ 'ok' if c.active else 'pending' }}"
+              style="{% if not c.active %}background: var(--terra-soft); color: var(--terra); border-color: var(--terra);{% endif %}">
+          {{ c.etat }}</span>
+        <span class="mono" style="margin-left: auto; color: var(--muted);">SIREN {{ c.siren }}</span>
+      </div>
+      <table style="margin-top: 12px; font-size: 14px;">
+        <tr><td style="width: 160px; color: var(--muted);">Activité (NAF)</td><td class="mono">{{ c.naf }}</td></tr>
+        <tr><td style="color: var(--muted);">Effectif</td><td>{{ c.effectif }}</td></tr>
+        <tr><td style="color: var(--muted);">Créée le</td><td class="mono">{{ c.creation }}</td></tr>
+        <tr><td style="color: var(--muted);">Siège</td><td>{{ c.siege }}</td></tr>
+        {% if c.dirigeants %}
+          <tr><td style="color: var(--muted); vertical-align: top;">Dirigeants</td>
+              <td>{{ c.dirigeants | join(" · ") }}</td></tr>
+        {% endif %}
+      </table>
+    </div>
+  {% endfor %}
+  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted);">
+    Données : API Recherche d'entreprises — RNE + Sirene, data publique de l'État.
+  </p>
+{% endif %}

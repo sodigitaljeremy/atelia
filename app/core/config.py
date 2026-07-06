@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # à false en prod le jour où la plateforme ne doit plus être réinitialisable.
     demo_mode: bool = True
 
+    # API Recherche d'entreprises (module Fournisseurs) — ouverte, sans clé (ADR-104).
+    # Surchargeable : utile en test et pour démontrer la gestion de panne.
+    suppliers_api_url: str = "https://recherche-entreprises.api.gouv.fr/search"
+
     # Modèles derrière LiteLLM — swappables vers Claude par simple changement de valeur (ADR-001)
     llm_model: str = "mistral/mistral-large-latest"
     embed_model: str = "mistral/mistral-embed"

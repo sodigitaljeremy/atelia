@@ -24,7 +24,8 @@ class Module:
     technique: str  # la technique IA/data démontrée (badge sur le hub)
     icone: str
     router: APIRouter
-    schema_path: Path  # schema.sql idempotent, appliqué au démarrage par core.db
+    # schema.sql idempotent, appliqué au démarrage par core.db — None si le module n'a pas de table
+    schema_path: Path | None = None
     nav: list[tuple[str, str, str]] = field(default_factory=list)  # (libellé, url, clé active)
     # Hook optionnel exécuté au démarrage après l'application des schémas
     # (migrations de données idempotentes, backfills…)

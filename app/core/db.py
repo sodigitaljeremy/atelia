@@ -13,7 +13,8 @@ async def connect() -> None:
     async with pool.acquire() as conn:
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
         for module in registry.modules:
-            await conn.execute(module.schema_path.read_text())
+            if module.schema_path is not None:
+                await conn.execute(module.schema_path.read_text())
 
 
 async def disconnect() -> None:

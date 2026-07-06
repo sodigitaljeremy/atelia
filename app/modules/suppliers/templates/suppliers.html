@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Fiabilité fournisseurs — AtelIA{% endblock %}
+{% block content %}
+  <h1>Fiabilité fournisseurs</h1>
+  <p class="subtitle">
+    Existence légale, état administratif, activité — vérifiés en direct sur les registres officiels.
+  </p>
+
+  <div class="card" style="margin-bottom: 20px;">
+    <p style="font-family: var(--sans); font-size: 14px;">
+      Cet outil interroge de <b>vraies entreprises</b> via une API ouverte de l'État — il est
+      volontairement <b>hors</b> de la fiction « {{ company_name }} » du reste de l'atelier :
+      ici, la donnée est réelle et publique, c'est tout l'intérêt.
+    </p>
+    <p style="font-family: var(--sans); font-size: 12.5px; color: var(--muted); margin-top: 8px;">
+      Source : <b>API Recherche d'entreprises</b> (recherche-entreprises.api.gouv.fr) —
+      RNE + Sirene, data publique de l'État. Pas de données financières sur l'API ouverte.
+    </p>
+  </div>
+
+  <h2>Essayez sur des cas connus</h2>
+  <div class="card" style="display: flex; gap: 12px; flex-wrap: wrap;">
+    {% for name, siren, note in examples %}
+      <button class="btn btn-quiet" hx-post="/suppliers/search" hx-vals='{"q": "{{ siren }}"}'
+              hx-target="#results" style="text-align: left;">
+        <b>{{ name }}</b><br>
+        <span style="font-size: 11.5px; color: var(--muted); font-weight: 400;">{{ note }}</span>
+      </button>
+    {% endfor %}
+  </div>
+
+  <h2>Ou cherchez librement</h2>
+  <div class="card">
+    <form hx-post="/suppliers/search" hx-target="#results"
+          style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 260px;">
+        <label for="q">Nom d'entreprise ou SIREN (9 chiffres = recherche directe)</label>
+        <input type="text" id="q" name="q" placeholder="ex. Fromageries Bel, ou 552081317"
+               style="width: 100%; padding: 8px 10px; font-family: var(--mono); font-size: 14px;
+                      border: 1px solid var(--line); border-radius: 3px;">
+      </div>
+      <button type="submit" class="btn btn-primary">Vérifier</button>
+    </form>
+  </div>
+
+  <div id="results" style="margin-top: 20px;"></div>
+{% endblock %}
