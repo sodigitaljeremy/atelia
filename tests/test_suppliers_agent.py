@@ -24,53 +24,20 @@ FICHE_EDF = {
     "dirigeants": [],
 }
 
-# Barème M3-b1 ajusté : actif ancien cohérent = 50 + 30 + 20 = 100 ; taille HORS critères
+# Depuis le fix « score déterministe » : le LLM ne renvoie QUE la prose + le SIREN analysé
 FINAL_JSON = json.dumps(
     {
-        "synthese": "Entreprise active et ancienne, données officielles cohérentes.",
-        "score": 100,
-        "taille": "10 000 salariés et plus",
-        "criteres": [
-            {"critere": "État administratif", "points": 50, "justification": "Active"},
-            {
-                "critere": "Ancienneté",
-                "points": 30,
-                "justification": "créée en 1955, plus de 10 ans",
-            },
-            {
-                "critere": "Cohérence des données",
-                "points": 20,
-                "justification": "SIREN présent (+10) et NAF présent (+10)",
-            },
-        ],
+        "synthese": "Entreprise active et ancienne, données officielles cohérentes. "
+        "Score système : 100/100.",
+        "siren_analyse": "552081317",
     },
     ensure_ascii=False,
 )
 
-# Règle éliminatoire : cessée → 0 partout, score 0
 FINAL_JSON_CESSEE = json.dumps(
     {
-        "synthese": "L'entreprise est cessée : statut éliminatoire, le score est de 0 "
-        "quelles que soient l'ancienneté et la cohérence des données.",
-        "score": 0,
-        "taille": "non renseigné",
-        "criteres": [
-            {
-                "critere": "État administratif",
-                "points": 0,
-                "justification": "Cessée — éliminatoire",
-            },
-            {
-                "critere": "Ancienneté",
-                "points": 0,
-                "justification": "annulée par la règle éliminatoire",
-            },
-            {
-                "critere": "Cohérence des données",
-                "points": 0,
-                "justification": "annulée par la règle éliminatoire",
-            },
-        ],
+        "synthese": "L'entreprise est cessée : statut éliminatoire, le score système est 0.",
+        "siren_analyse": "344260286",
     },
     ensure_ascii=False,
 )
@@ -128,15 +95,12 @@ def test_boucle_nominale_tool_call_puis_synthese(monkeypatch):
     analysis = asyncio.run(agent.analyze("EDF"))
 
     assert analysis["error"] is None
-    # actif ancien cohérent = 100 (50 état + 30 ancienneté + 20 cohérence), 3 critères
+    # score CALCULÉ EN CODE depuis la fiche brute : actif ancien cohérent = 100
     assert analysis["result"]["score"] == 100
     assert len(analysis["result"]["criteres"]) == 3
-    assert [c["critere"] for c in analysis["result"]["criteres"]] == [
-        "État administratif",
-        "Ancienneté",
-        "Cohérence des données",
-    ]
-    # la taille est une info de contexte séparée, jamais un critère noté
+    # invariant structurel : le gros chiffre EST la somme des lignes du tableau
+    assert analysis["result"]["score"] == sum(c["points"] for c in analysis["result"]["criteres"])
+    # la taille vient de la fiche brute (info de contexte, jamais notée)
     assert analysis["result"]["taille"] == "10 000 salariés et plus"
     assert all("aille" not in c["critere"] for c in analysis["result"]["criteres"])
     kinds = [step["kind"] for step in analysis["timeline"]]
@@ -146,6 +110,8 @@ def test_boucle_nominale_tool_call_puis_synthese(monkeypatch):
     tool_messages = [m for m in seen[1] if m.get("role") == "tool"]
     assert tool_messages[0]["tool_call_id"] == "call_abc123"
     assert "552081317" in tool_messages[0]["content"]
+    # le modèle REÇOIT le score calculé par le code (il ne le produit jamais)
+    assert "score_bareme" in tool_messages[0]["content"]
 
 
 def test_garde_fou_anti_boucle_infinie(monkeypatch):
@@ -296,24 +262,111 @@ def test_cessee_est_eliminatoire_score_zero(monkeypatch):
     )
 
     async def fake_search(query, **kwargs):
-        return [{**FICHE_EDF, "nom": "VIRGIN STORES", "etat": "Cessée", "active": False}]
+        return [
+            {
+                **FICHE_EDF,
+                "nom": "VIRGIN STORES",
+                "siren": "344260286",
+                "etat": "Cessée",
+                "active": False,
+            }
+        ]
 
     monkeypatch.setattr(agent, "search_companies", fake_search)
     analysis = asyncio.run(agent.analyze("virgin stores"))
 
+    # score calculé en CODE : cessée → 0 partout, quel que soit le texte du LLM
     assert analysis["result"]["score"] == 0
     assert all(c["points"] == 0 for c in analysis["result"]["criteres"])
+    assert analysis["result"]["score"] == sum(c["points"] for c in analysis["result"]["criteres"])
     assert "éliminatoire" in analysis["result"]["synthese"]
 
 
-def test_le_bareme_du_prompt_est_le_nouveau():
-    # garde-fou anti-régression : les règles imposées figurent bien dans le system prompt
+# --- grade() : la seule source de vérité du score --------------------------------
+
+
+def _fiche(**overrides):
+    return {**FICHE_EDF, **overrides}
+
+
+def test_grade_active_ancienne_coherente_vaut_100():
+    from datetime import date
+
+    notation = agent.grade(_fiche(), today=date(2026, 7, 6))
+    assert notation["score"] == 100
+    assert notation["score"] == sum(c["points"] for c in notation["criteres"])
+
+
+def test_grade_invariant_somme_sur_plusieurs_profils():
+    from datetime import date
+
+    today = date(2026, 7, 6)
+    profils = [
+        _fiche(),  # 100
+        _fiche(creation="2020-01-01"),  # 50+20+20 = 90
+        _fiche(creation="2025-01-01"),  # 50+10+20 = 80
+        _fiche(creation=None),  # 50+0+20 = 70
+        _fiche(naf="—"),  # 50+30+10 = 90
+        _fiche(siren=None, naf=None),  # 50+30+0 = 80
+        _fiche(active=False, etat="Cessée"),  # 0
+    ]
+    attendus = [100, 90, 80, 70, 90, 80, 0]
+    for fiche, attendu in zip(profils, attendus):
+        notation = agent.grade(fiche, today=today)
+        assert notation["score"] == attendu, fiche
+        # l'invariant : le total est TOUJOURS la somme des lignes du tableau
+        assert notation["score"] == sum(c["points"] for c in notation["criteres"])
+        assert len(notation["criteres"]) == 3
+
+
+def test_les_procedures_bodacc_ne_changent_pas_le_score(monkeypatch):
+    """Même entreprise, avec procédures BODACC capturées → score STRICTEMENT identique."""
+
+    async def fake_search(query, **kwargs):
+        return [FICHE_EDF]
+
+    procedures = [
+        {
+            "nature": "Liquidation judiciaire",
+            "date_jugement": "2021-04-14",
+            "date_parution": "2021-04-25",
+            "tribunal": "TC Lille",
+        }
+    ]
+
+    async def fake_bodacc(siren, **kwargs):
+        return procedures
+
+    monkeypatch.setattr(agent, "search_companies", fake_search)
+    monkeypatch.setattr(agent, "search_procedures", fake_bodacc)
+
+    # analyse SANS bodacc (le modèle n'appelle que la recherche)
+    monkeypatch.setattr(
+        llm, "complete_messages", _scripted_llm([_tool_call_reply(), _final_reply()], [])
+    )
+    sans = asyncio.run(agent.analyze("EDF"))
+    # analyse AVEC bodacc (procédures trouvées)
+    monkeypatch.setattr(
+        llm,
+        "complete_messages",
+        _scripted_llm([_tool_call_reply(), _bodacc_call_reply(), _final_reply()], []),
+    )
+    avec = asyncio.run(agent.analyze("EDF"))
+
+    assert sans["result"]["score"] == avec["result"]["score"] == 100
+    assert sans["result"]["criteres"] == avec["result"]["criteres"]
+    assert avec["bodacc"]["procedures"] == procedures  # l'alerte, elle, est bien là
+
+
+def test_le_prompt_interdit_au_llm_de_calculer_le_score():
+    # garde-fou anti-régression : le score est système, le LLM ne le produit jamais
     prompt = agent.SYSTEM_PROMPT
-    assert "ÉLIMINATOIRE" in prompt and "score global est 0" in prompt
-    assert "Active = 50" in prompt
-    assert "plus de 10 ans = 30" in prompt and "3 à 10 ans = 20" in prompt
-    assert "SIREN présent = 10" in prompt and "code NAF présent = 10" in prompt
-    assert "n'est PAS un critère" in prompt  # taille hors barème
+    assert "CALCULÉ PAR LE SYSTÈME, JAMAIS PAR TOI" in prompt
+    assert "INTERDICTION ABSOLUE" in prompt and "recalculer" in prompt
+    assert "ne modifient JAMAIS ce score" in prompt  # BODACC hors score
+    assert "score_bareme" in prompt  # il REÇOIT le score déjà calculé
+    assert "siren_analyse" in prompt
+    assert '"score"' not in prompt.split("RÉPONSE FINALE")[1]  # plus de score dans le JSON final
 
 
 def test_repli_si_reponse_finale_non_json(monkeypatch):
