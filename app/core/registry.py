@@ -30,6 +30,8 @@ class Module:
     # Hook optionnel exécuté au démarrage après l'application des schémas
     # (migrations de données idempotentes, backfills…)
     on_startup: Callable[[], Awaitable[None]] | None = None
+    # Position dans le hub et la nav (ordre narratif : déterministe → RAG → agent → NLP)
+    ordre: int = 99
 
 
 def _discover() -> list[Module]:
@@ -42,7 +44,7 @@ def _discover() -> list[Module]:
             continue
         package = importlib.import_module(f"app.modules.{info.name}")
         found.append(package.MODULE)
-    return sorted(found, key=lambda module: module.slug)
+    return sorted(found, key=lambda module: (module.ordre, module.slug))
 
 
 _modules: list[Module] | None = None

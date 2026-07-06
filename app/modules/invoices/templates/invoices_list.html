@@ -6,6 +6,18 @@
 
   {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 
+  <div class="card module-intro">
+    <p>
+      L'extraction lit le <b>XML Factur-X</b> embarqué dans le PDF — <b>déterministe, zéro
+      LLM</b> : quand le standard fait foi, les règles suffisent. Contrôles automatiques à
+      l'ingestion (totaux, TVA, dates, doublons), et <b>aucune écriture sans validation humaine</b>.
+    </p>
+    <p class="intro-note">
+      Données 100 % synthétiques : les factures d'exemple sont générées ({{ company_name }}
+      est une PME fictive).
+    </p>
+  </div>
+
   <div class="card" style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
     <form action="/invoices/upload" method="post" enctype="multipart/form-data"
           style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
@@ -67,4 +79,9 @@
       <p class="empty">Aucune facture en attente — déposez un PDF Factur-X ci-dessus.</p>
     {% endif %}
   </div>
+
+  <p class="transparency">
+    Extraction et contrôles 100 % déterministes (XML Factur-X, aucun LLM) · factures
+    synthétiques · Démonstration — ne remplace pas un outil comptable.
+  </p>
 {% endblock %}

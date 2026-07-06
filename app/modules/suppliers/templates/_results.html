@@ -8,9 +8,7 @@
     <div class="card" style="margin-bottom: 14px;">
       <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;">
         <h3 style="font-size: 19px; font-weight: 600;">{{ c.nom }}</h3>
-        <span class="badge {{ 'ok' if c.active else 'pending' }}"
-              style="{% if not c.active %}background: var(--terra-soft); color: var(--terra); border-color: var(--terra);{% endif %}">
-          {{ c.etat }}</span>
+        <span class="badge {{ 'ok' if c.active else 'danger' }}">{{ c.etat }}</span>
         <span class="mono" style="margin-left: auto; color: var(--muted);">SIREN {{ c.siren }}</span>
       </div>
       <table style="margin-top: 12px; font-size: 14px;">
@@ -25,7 +23,7 @@
       </table>
     </div>
   {% endfor %}
-  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted);">
+  <p class="transparency">
     Données : API Recherche d'entreprises — RNE + Sirene, data publique de l'État.
   </p>
 {% endif %}

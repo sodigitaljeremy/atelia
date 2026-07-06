@@ -15,4 +15,5 @@ MODULE = Module(
     icone="📨",
     router=router,
     nav=[("Triage", "/triage", "triage")],
+    ordre=4,
 )

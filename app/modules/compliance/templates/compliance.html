@@ -6,10 +6,16 @@
     Retrouver la règle exacte — étiquetage, allergènes — sans éplucher le règlement.
   </p>
 
-  <div class="alert" style="background: #f0e6c8; border-color: #dcc98f; color: #7a5f18;">
-    Deux modes : <b>question → réponse citée</b> (RAG : le modèle ne s'appuie que sur les
-    passages retrouvés, cite ses articles, et dit « je ne trouve pas » hors corpus) et
-    <b>recherche sémantique brute</b> (les passages, sans interprétation).
+  <div class="card module-intro">
+    <p>
+      Deux modes : <b>question → réponse citée</b> (RAG : le modèle ne s'appuie que sur les
+      passages retrouvés, cite ses articles, et dit « je ne trouve pas » hors corpus) et
+      <b>recherche sémantique brute</b> (les passages, sans interprétation).
+    </p>
+    <p class="intro-note">
+      Source : <b>règlement (UE) n° 1169/2011 (INCO)</b>, texte officiel consolidé au
+      01/04/2025 (EUR-Lex, CELEX 02011R1169) — indexé dans pgvector, embeddings mistral-embed.
+    </p>
   </div>
 
   <h2>Poser une question — réponse citée</h2>
@@ -18,13 +24,11 @@
           style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
       <div style="flex: 1; min-width: 260px;">
         <label for="ask-q">Votre question sur l'étiquetage / les allergènes</label>
-        <input type="text" id="ask-q" name="q" placeholder="ex. quels allergènes faut-il déclarer ?"
-               style="width: 100%; padding: 8px 10px; font-family: var(--mono); font-size: 14px;
-                      border: 1px solid var(--line); border-radius: 3px;">
+        <input type="text" id="ask-q" name="q" placeholder="ex. quels allergènes faut-il déclarer ?">
       </div>
-      <button type="submit" class="btn btn-primary">Demander</button>
-      <span id="ask-loading" class="htmx-indicator" style="font-family: var(--sans); font-size: 13px; color: var(--muted);">
-        ⏳ retrieval + génération…</span>
+      <button type="submit" class="btn btn-primary">Poser la question</button>
+      <span id="ask-loading" class="htmx-indicator loading">
+        ⏳ génération en cours — retrieval puis rédaction citée…</span>
     </form>
   </div>
 
@@ -54,27 +58,24 @@
     {% endif %}
   </div>
 
-  <h2>Recherche sémantique brute (les passages, sans interprétation)</h2>
+  <h2>Recherche sémantique brute</h2>
   <div class="card">
     <form hx-post="/compliance/search" hx-target="#chunks" hx-indicator="#search-loading"
           style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
       <div style="flex: 1; min-width: 260px;">
         <label for="q">Question ou mots-clés</label>
-        <input type="text" id="q" name="q" placeholder="ex. quels allergènes faut-il déclarer ?"
-               style="width: 100%; padding: 8px 10px; font-family: var(--mono); font-size: 14px;
-                      border: 1px solid var(--line); border-radius: 3px;">
+        <input type="text" id="q" name="q" placeholder="ex. taille de police minimale des mentions">
       </div>
       <button type="submit" class="btn btn-primary">Rechercher</button>
-      <span id="search-loading" class="htmx-indicator" style="font-family: var(--sans); font-size: 13px; color: var(--muted);">
-        ⏳ vectorisation de la requête…</span>
+      <span id="search-loading" class="htmx-indicator loading">
+        ⏳ recherche en cours — vectorisation de la requête…</span>
     </form>
   </div>
 
   <div id="chunks" style="margin-top: 20px;"></div>
 
-  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px;">
-    Source : règlement (UE) n° 1169/2011 consolidé (EUR-Lex, texte officiel) ·
-    embeddings mistral-embed · recherche pgvector (cosinus). Outil de démonstration —
-    ne constitue pas un conseil juridique.
+  <p class="transparency">
+    Réponses générées par IA (Mistral) à partir du texte officiel indexé (EUR-Lex) ·
+    vérifiez toujours les sources citées · Démonstration — ne constitue pas un avis juridique.
   </p>
 {% endblock %}

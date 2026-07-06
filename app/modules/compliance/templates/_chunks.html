@@ -15,7 +15,7 @@
       <p style="font-size: 14px; margin-top: 10px; white-space: pre-line;">{{ c.contenu[:600] }}{% if c.contenu | length > 600 %}…{% endif %}</p>
     </div>
   {% endfor %}
-  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted);">
+  <p class="transparency">
     Passages bruts du texte officiel, classés par similarité sémantique — aucune reformulation.
   </p>
 {% endif %}

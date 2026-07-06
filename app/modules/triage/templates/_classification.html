@@ -18,10 +18,7 @@
   <div class="card">
     <div style="display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap;">
       <span class="badge ok">{{ result.categorie }}</span>
-      <span class="badge"
-            style="{% if result.priorite == 'critique' %}background: var(--terra); color: #fff; border: none;
-                   {% elif result.priorite == 'haute' %}background: #f0e6c8; color: #7a5f18; border: 1px solid #dcc98f;
-                   {% else %}background: var(--line-soft); color: var(--muted); border: 1px solid var(--line);{% endif %}">
+      <span class="badge {% if result.priorite == 'critique' %}danger{% elif result.priorite == 'haute' %}pending{% else %}neutral{% endif %}">
         priorité {{ result.priorite }}</span>
       <span style="font-family: var(--sans); font-size: 13px; color: var(--muted); margin-left: auto;">
         → {{ result.service_destinataire }}</span>

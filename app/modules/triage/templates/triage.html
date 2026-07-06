@@ -7,40 +7,42 @@
     l'humain traite, il ne dépouille plus.
   </p>
 
-  <div class="card" style="margin-bottom: 20px;">
-    <p style="font-family: var(--sans); font-size: 14px;">
+  <div class="card module-intro">
+    <p>
       Classification <b>zero-shot</b> : le modèle n'a vu aucun exemple étiqueté, il applique
       des catégories fermées décrites dans sa consigne. Et parce qu'on ne confie pas le
       critique à un LLM : un <b>garde-fou déterministe</b> (règles en code) force la priorité
       « critique » sur tout signal de sécurité alimentaire, quel que soit l'avis du modèle.
     </p>
+    <p class="intro-note">
+      Données 100 % synthétiques : aucune vraie réclamation (confidentialité) — les exemples
+      sont inventés pour la démonstration.
+    </p>
   </div>
 
-  <h2>Essayez sur des messages types</h2>
+  <h2>Essayez sur des exemples</h2>
   <div class="card" style="display: flex; gap: 12px; flex-wrap: wrap;">
     {% for label, text in examples %}
       <form hx-post="/triage/classify" hx-target="#classification" hx-indicator="#triage-loading"
             style="margin: 0;">
         <input type="hidden" name="message" value="{{ text }}">
-        <button type="submit" class="btn btn-quiet" style="text-align: left; max-width: 220px;">
-          <b>{{ label }}</b><br>
-          <span style="font-size: 11px; color: var(--muted); font-weight: 400;">{{ text[:70] }}…</span>
+        <button type="submit" class="btn btn-quiet example-btn">
+          <b>{{ label }}</b>
+          <small>{{ text[:70] }}…</small>
         </button>
       </form>
     {% endfor %}
   </div>
 
-  <h2>Ou collez votre propre message</h2>
+  <h2>Ou testez librement</h2>
   <div class="card">
     <form hx-post="/triage/classify" hx-target="#classification" hx-indicator="#triage-loading">
       <label for="message">Message entrant (email, formulaire, réclamation…)</label>
       <textarea id="message" name="message" rows="4"
-                placeholder="Collez ici un message à trier…"
-                style="width: 100%; padding: 10px; font-family: var(--sans); font-size: 14px;
-                       border: 1px solid var(--line); border-radius: 3px; resize: vertical;"></textarea>
+                placeholder="Collez ici un message à trier…"></textarea>
       <div style="display: flex; align-items: center; gap: 14px; margin-top: 12px;">
         <button type="submit" class="btn btn-primary">Classer</button>
-        <span id="triage-loading" class="htmx-indicator" style="font-family: var(--sans); font-size: 13px; color: var(--muted);">
+        <span id="triage-loading" class="htmx-indicator loading">
           ⏳ classification en cours…</span>
       </div>
     </form>
@@ -48,8 +50,8 @@
 
   <div id="classification" style="margin-top: 20px;"></div>
 
-  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px;">
-    Classification par IA (Mistral) en zero-shot sur données synthétiques ; priorité sécurité
-    vérifiée par règle déterministe. Démonstration.
+  <p class="transparency">
+    Classification générée par IA (Mistral) en zero-shot · messages 100 % synthétiques ·
+    priorité sécurité vérifiée par règle déterministe · Démonstration.
   </p>
 {% endblock %}

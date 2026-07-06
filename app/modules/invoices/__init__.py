@@ -15,5 +15,6 @@ MODULE = Module(
     router=router,
     schema_path=Path(__file__).parent / "schema.sql",
     nav=[("Factures", "/invoices", "invoices"), ("Gains", "/dashboard", "dashboard")],
+    ordre=1,
     on_startup=repository.backfill_gain_events,
 )

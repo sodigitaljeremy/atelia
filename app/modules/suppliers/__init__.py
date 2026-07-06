@@ -7,8 +7,9 @@ MODULE = Module(
     slug="suppliers",
     titre="Fiabilité fournisseurs",
     probleme="Vérifier en direct qu'une entreprise existe légalement et est active, sans ressaisie.",
-    technique="API publiques de l'État en direct (RNE + Sirene)",
+    technique="Agent function-calling sur API publiques (RNE/Sirene, BODACC)",
     icone="🔎",
     router=router,
     nav=[("Fournisseurs", "/suppliers", "suppliers")],
+    ordre=3,
 )

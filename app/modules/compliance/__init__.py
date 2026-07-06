@@ -15,5 +15,6 @@ MODULE = Module(
     router=router,
     schema_path=Path(__file__).parent / "schema.sql",
     nav=[("Conformité", "/compliance", "compliance")],
+    ordre=2,
     on_startup=repository.ingest_corpus_best_effort,
 )
