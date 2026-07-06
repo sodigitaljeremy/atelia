@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://atelia:atelia@localhost:5432/atelia"
 
     # PME fictive incarnée par la plateforme (ADR-102) — unique source du nom, utilisée partout
-    company_name: str = "Conserverie du Val"
+    company_name: str = "Conservia"
 
     # Hypothèses de gain du module Factures — PARAMÉTRABLES (affichées comme telles dans l'UI).
     # 15 € : ordre de grandeur France Num pour une facture papier entrante (IGF/DGFiP : 14-20 €).

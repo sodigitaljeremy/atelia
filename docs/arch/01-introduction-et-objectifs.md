@@ -3,7 +3,7 @@
 ## But
 
 AtelIA est une **plateforme portfolio de démonstration AI Engineering**. Elle incarne une PME
-agroalimentaire fictive (« Conserverie du Val », ADR-102) et résout ses problèmes métier un par
+agroalimentaire fictive (« Conservia », ADR-102) et résout ses problèmes métier un par
 un, chacun avec la technique appropriée. Le message à prouver : *savoir diagnostiquer un besoin
 et choisir la bonne approche IA — déterministe, RAG, agent, classification — plutôt que plaquer
 un LLM partout.*

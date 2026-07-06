@@ -171,4 +171,4 @@ Ne pas réécrire le README maintenant : il sera rédigé **après la Slice R0**
 
 ## 10. À trancher avant R0
 
-- **Nom de la PME fictive** : proposition de travail *« Conserverie du Val »* (générique, à **vérifier qu'aucune entreprise réelle ne porte ce nom** ; sinon en choisir un autre franchement inventé). Le nom de plateforme **AtelIA** est conservé (« atelier IA », agnostique).
+- **Nom de la PME fictive** : nom acté : *« Conservia »* (générique, à **vérifier qu'aucune entreprise réelle ne porte ce nom** ; sinon en choisir un autre franchement inventé). Le nom de plateforme **AtelIA** est conservé (« atelier IA », agnostique).

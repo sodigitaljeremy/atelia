@@ -15,7 +15,7 @@ Slice R0.
 ## Décision
 
 - La PME est **fictive** et son nom vit dans **une seule variable de configuration** :
-  `settings.company_name` (`app/core/config.py`), valeur par défaut « Conserverie du Val »,
+  `settings.company_name` (`app/core/config.py`), valeur par défaut « Conservia »,
   surchargeable par variable d'environnement.
 - L'UI ne contient **aucun nom en dur** : un context processor Jinja
   (`app/core/templates.py`) injecte `company_name` dans tous les templates (topbar,
@@ -34,8 +34,9 @@ Slice R0.
 - **Compromis / limites** :
   - le nom est **embarqué dans les PDF de `samples/`** : changer `company_name` impose de
     régénérer les samples (`uv run scripts/generate_samples.py`) et de reconstruire l'image ;
-  - « Conserverie du Val » est une valeur de travail : vérifier qu'aucune entreprise
-    réelle ne porte ce nom avant toute communication large (sinon en changer — coût : une
-    variable + régénération des samples) ;
+  - le nom reste une valeur de travail : vérifier qu'aucune entreprise réelle ne porte
+    ce nom avant toute communication large (sinon en changer — coût : une variable +
+    régénération des samples). Déjà renommé deux fois depuis le POC v1 au coût prévu
+    (anciens noms volontairement non cités ici — zéro occurrence résiduelle ; voir git) ;
   - l'anonymisation reste une discipline de relecture, pas une garantie outillée (pas de
     contrôle automatique en CI à ce stade).

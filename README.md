@@ -16,7 +16,7 @@ décision engage. C'est cette capacité de diagnostic que la plateforme démontr
 
 ## 2. La plateforme et sa démarche
 
-AtelIA incarne une PME agroalimentaire **fictive**, la « Conserverie du Val » (aucune entreprise
+AtelIA incarne une PME agroalimentaire **fictive**, « Conservia » (aucune entreprise
 réelle nommée, nom paramétrable). Chaque module part d'un problème concret de cette PME, le
 résout de bout en bout, et se mesure.
 

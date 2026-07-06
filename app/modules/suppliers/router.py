@@ -13,7 +13,7 @@ router = APIRouter(include_in_schema=False)
 
 # Exemples réels et publics, vérifiés via l'API — cas variés : active/grande, service
 # public, commerce international, et une entreprise cessée (données ouvertes de l'État,
-# hors fiction « Conserverie du Val » — ADR-102 respecté par séparation explicite).
+# hors de la fiction de la PME de l'atelier — ADR-102 respecté par séparation explicite).
 EXAMPLES = [
     ("EDF", "552081317", "énergie — grande entreprise active"),
     ("La Poste", "356000000", "service public"),
