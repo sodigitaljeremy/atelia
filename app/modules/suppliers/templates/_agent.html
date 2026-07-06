@@ -24,6 +24,12 @@
           </div>
           <div style="font-family: var(--sans); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted);">
             Score de fiabilité</div>
+          {% if result.taille %}
+            <div style="font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 8px;">
+              Effectif : {{ result.taille }}<br>
+              <span style="font-size: 10.5px;">(information de contexte, non notée)</span>
+            </div>
+          {% endif %}
         </div>
         <p style="flex: 1; min-width: 260px; font-size: 15px;">{{ result.synthese }}</p>
       </div>

@@ -50,22 +50,32 @@ RÈGLES D'ANCRAGE — ABSOLUES :
 - Si l'outil renvoie une erreur ou aucun résultat, dis-le simplement, sans supposer.
 
 GRILLE DE SCORE (0-100) — IMPOSÉE, tu ne la modifies pas :
-- État administratif : Active = 40 points ; Cessée = 0 point.
-- Ancienneté (date de création) : plus de 20 ans = 25 ; 5 à 20 ans = 15 ; moins de 5 ans = 5 ;
-  non disponible = 0.
-- Taille (tranche d'effectif) : 50 salariés ou plus = 20 ; moins de 50 = 10 ; non renseigné = 0.
-- Cohérence des données (SIREN ET code NAF présents) = 15 ; sinon 0.
-Le score est la somme exacte de ces contributions.
+- RÈGLE ÉLIMINATOIRE, à vérifier EN PREMIER : si l'état administratif est « Cessée »,
+  alors TOUS les critères valent 0 point et le score global est 0, quelles que soient
+  l'ancienneté et la cohérence des données. La synthèse doit dire explicitement que le
+  statut cessé est éliminatoire.
+- Si l'entreprise est Active :
+  * État administratif : Active = 50 points.
+  * Ancienneté (calculée depuis la date de création réelle) : plus de 10 ans = 30 ;
+    3 à 10 ans = 20 ; moins de 3 ans = 10 ; date non disponible = 0.
+  * Cohérence des données : SIREN présent = 10 points + code NAF présent = 10 points
+    (total 20 ; détaille les deux dans la justification).
+- La TAILLE (tranche d'effectif) n'est PAS un critère : 0 point, hors barème. C'est une
+  information de contexte à restituer dans le champ « taille », jamais dans le score.
+Le score est la somme exacte de ces contributions (maximum 100 pour une entreprise
+active, ancienne et cohérente).
 
 RÉPONSE FINALE — STRICTEMENT ce JSON, sans texte autour ni markdown :
 {"synthese": "3-5 phrases factuelles fondées sur les données de l'outil",
  "score": <somme des points>,
+ "taille": "tranche d'effectif telle que renvoyée par l'outil, ou « non renseigné »",
  "criteres": [{"critere": "État administratif", "points": <n>, "justification": "..."},
               {"critere": "Ancienneté", "points": <n>, "justification": "..."},
-              {"critere": "Taille", "points": <n>, "justification": "..."},
               {"critere": "Cohérence des données", "points": <n>, "justification": "..."}]}
-S'il y a plusieurs résultats, analyse le plus pertinent par rapport à la demande et dis-le
-dans la synthèse."""
+Exactement ces 3 critères — la taille n'y figure jamais. Les clés JSON sont exactement
+"synthese", "score", "taille", "criteres", "critere", "points", "justification" — SANS
+accent. S'il y a plusieurs résultats, analyse le plus pertinent par rapport à la demande
+et dis-le dans la synthèse."""
 
 
 def _summarize_tool_result(companies: list[dict]) -> str:
@@ -74,6 +84,18 @@ def _summarize_tool_result(companies: list[dict]) -> str:
     parts = [f"{c['nom']} ({c['etat']}, SIREN {c['siren']})" for c in companies[:3]]
     extra = f" +{len(companies) - 3} autre(s)" if len(companies) > 3 else ""
     return f"{len(companies)} fiche(s) : " + " · ".join(parts) + extra
+
+
+# Le prompt impose des clés sans accent, mais les modèles en remettent parfois : on tolère.
+_KEY_ALIASES = {"synthèse": "synthese", "critères": "criteres", "critère": "critere"}
+
+
+def _normalize_keys(value):
+    if isinstance(value, dict):
+        return {_KEY_ALIASES.get(k, k): _normalize_keys(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_normalize_keys(item) for item in value]
+    return value
 
 
 def _parse_final(content: str) -> dict | None:
@@ -86,7 +108,10 @@ def _parse_final(content: str) -> dict | None:
         parsed = json.loads(text[start_index : end_index + 1])
     except ValueError:
         return None
-    if not isinstance(parsed, dict) or "synthese" not in parsed:
+    if not isinstance(parsed, dict):
+        return None
+    parsed = _normalize_keys(parsed)
+    if "synthese" not in parsed:
         return None
     return parsed
 
