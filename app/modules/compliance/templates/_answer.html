@@ -22,7 +22,7 @@
             similarité {{ "%.3f" | format(s.similarite) }}</span>
         </div>
         <p style="font-size: 13px; color: var(--muted); margin-top: 8px; white-space: pre-line;">
-          {{ s.contenu[:400] }}{% if s.contenu | length > 400 %}…{% endif %}</p>
+          {{ s.contenu | extrait(400) }}</p>
       </div>
     {% endfor %}
   {% endif %}

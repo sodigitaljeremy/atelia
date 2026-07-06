@@ -19,9 +19,9 @@ async def main() -> None:
     try:
         report = await repository.ingest_corpus()
         print(
-            f"Ingestion : {report['documents']} document(s), "
-            f"{report['chunks_added']} chunk(s) ajoutés, "
-            f"{report['chunks_skipped']} déjà présents (sautés)."
+            f"Ingestion : {report['documents']} document(s) — "
+            f"{report['regenerated']} régénéré(s) ({report['chunks_added']} chunks), "
+            f"{report['unchanged']} inchangé(s)."
         )
     finally:
         await db.disconnect()

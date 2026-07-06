@@ -109,6 +109,76 @@ def test_extraction_html_puis_chunking_bout_en_bout():
     assert [c["ref_article"] for c in chunks] == ["Article 9", "Annexe II"]
 
 
+# --- Nettoyage Lot 2 : marqueurs retirés, fragments fusionnés, jamais de contenu perdu ---
+
+
+def test_clean_retire_les_marqueurs_de_rectificatif_en_gardant_le_texte():
+    lines = ingestion.clean_lines(["►C1 matières grasses ◄", "▼M5 dont:", "texte ————— suite"])
+    assert lines == ["matières grasses", "dont:", "texte suite"]
+
+
+def test_clean_fusionne_les_marqueurs_de_liste_orphelins():
+    lines = ingestion.clean_lines(
+        ["a)", "les définitions de «denrée alimentaire»", "b)", "autre point"]
+    )
+    assert lines == ["a) les définitions de «denrée alimentaire»", "b) autre point"]
+
+
+def test_clean_fusionne_les_unites_du_tableau_nutritionnel():
+    lines = ingestion.clean_lines(["énergie", "kJ/kcal", "matières grasses", "g", "glucides", "g"])
+    assert lines == ["énergie — kJ/kcal", "matières grasses — g", "glucides — g"]
+
+
+def test_clean_retire_les_renvois_de_notes_espaces_seulement():
+    # « ( 1 ) » (format EUR-Lex espacé) part ; « (1) » collé et « paragraphe 1 » restent
+    lines = ingestion.clean_lines(
+        [
+            "visés à l'article 9 ( 1 ) du règlement",
+            "le paragraphe 1, point c) s'applique",
+            "au sens du point (1)",
+        ]
+    )
+    assert lines[0] == "visés à l'article 9 du règlement"
+    assert lines[1] == "le paragraphe 1, point c) s'applique"
+    assert lines[2] == "au sens du point (1)"
+
+
+def test_clean_ne_supprime_jamais_de_contenu():
+    # tout le texte réglementaire d'entrée se retrouve en sortie (fusionné, jamais perdu)
+    entree = ["a)", "céréales contenant du gluten", "12)", "lupin et produits à base de lupin", "g"]
+    sortie = " ".join(ingestion.clean_lines(entree))
+    for fragment in (
+        "céréales contenant du gluten",
+        "lupin et produits à base de lupin",
+        "a)",
+        "12)",
+    ):
+        assert fragment in sortie
+
+
+def test_extraction_reelle_sans_artefacts():
+    """Sur le vrai corpus déposé : plus aucun marqueur ni cellule-unité isolée."""
+    import pathlib
+
+    html_path = pathlib.Path("data/corpus/inco/inco.html")
+    if not html_path.exists():
+        import pytest
+
+        pytest.skip("corpus non déposé dans cet environnement")
+    markdown = ingestion.extract_markdown_from_html(
+        html_path.read_text(encoding="utf-8", errors="replace")
+    )
+    assert "▼" not in markdown and "►" not in markdown and "◄" not in markdown
+    assert "—————" not in markdown
+    import re
+
+    assert not re.search(r"^\w{1,3}$", markdown, re.M), "cellule isolée résiduelle"
+    assert not re.search(r"\( \d+ \)", markdown), "renvoi de note résiduel"
+    # le contenu réglementaire clé est intact
+    assert "Céréales contenant du gluten" in markdown
+    assert "matières grasses — g" in markdown  # unités fusionnées, pas perdues
+
+
 def test_format_pgvector():
     literal = ingestion.to_pgvector([0.25, -1.0, 0.5])
     assert literal.startswith("[") and literal.endswith("]")

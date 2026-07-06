@@ -1,5 +1,6 @@
 """Accès données du module Conformité : ingestion idempotente + recherche vectorielle."""
 
+import hashlib
 import logging
 from datetime import date
 
@@ -27,44 +28,68 @@ async def upsert_document(meta: dict) -> int:
         )
 
 
-async def existing_refs(document_id: int) -> set[str]:
-    async with db.pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT ref_article FROM compliance_chunk WHERE document_id = $1", document_id
-        )
-    return {row["ref_article"] for row in rows}
+def corpus_hash(chunks: list[dict]) -> str:
+    """Empreinte du contenu chunké : change si le texte OU le nettoyage change."""
+    digest = hashlib.sha256()
+    for chunk in chunks:
+        digest.update(chunk["ref_article"].encode())
+        digest.update(chunk["contenu"].encode())
+    return digest.hexdigest()
 
 
-async def insert_chunks(document_id: int, chunks: list[dict], vectors: list[list[float]]) -> None:
+async def stored_hash(document_id: int) -> str | None:
     async with db.pool.acquire() as conn:
-        await conn.executemany(
-            """
-            INSERT INTO compliance_chunk (document_id, ref_article, contenu, embedding)
-            VALUES ($1, $2, $3, $4::vector)
-            ON CONFLICT (document_id, ref_article) DO NOTHING
-            """,
-            [
-                (document_id, chunk["ref_article"], chunk["contenu"], ingestion.to_pgvector(vec))
-                for chunk, vec in zip(chunks, vectors)
-            ],
+        return await conn.fetchval(
+            "SELECT corpus_hash FROM compliance_document WHERE id = $1", document_id
         )
 
 
 async def ingest_corpus() -> dict:
-    """Ingestion idempotente : seuls les chunks ABSENTS sont vectorisés (aucun appel
-    d'embedding inutile) puis insérés. Relançable à volonté sans doublon (UNIQUE)."""
-    report = {"documents": 0, "chunks_added": 0, "chunks_skipped": 0}
+    """Ingestion idempotente par empreinte de contenu.
+
+    Hash identique → no-op total (0 appel d'embedding). Hash différent (texte source
+    OU pipeline de nettoyage modifié) → les chunks du document sont régénérés et
+    ré-embeddés en bloc, puis l'empreinte est mise à jour. C'est ce qui permet à la
+    prod de se ré-indexer seule au déploiement d'un nettoyage amélioré.
+    """
+    report = {"documents": 0, "regenerated": 0, "unchanged": 0, "chunks_added": 0}
     for document in ingestion.load_corpus():
         document_id = await upsert_document(document["meta"])
         report["documents"] += 1
-        known = await existing_refs(document_id)
-        missing = [c for c in document["chunks"] if c["ref_article"] not in known]
-        report["chunks_skipped"] += len(document["chunks"]) - len(missing)
-        if not missing:
+        new_hash = corpus_hash(document["chunks"])
+        if await stored_hash(document_id) == new_hash:
+            report["unchanged"] += 1
             continue
-        embeddings = await llm.embed_many([c["contenu"] for c in missing])
-        await insert_chunks(document_id, missing, embeddings["vectors"])
-        report["chunks_added"] += len(missing)
+        embeddings = await llm.embed_many([c["contenu"] for c in document["chunks"]])
+        # Une seule transaction : delete + insert + hash. Le hash n'est posé QUE si
+        # l'insertion a réussi — un échec laisse l'ancien état, régénéré au prochain run.
+        async with db.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM compliance_chunk WHERE document_id = $1", document_id
+                )
+                await conn.executemany(
+                    """
+                    INSERT INTO compliance_chunk (document_id, ref_article, contenu, embedding)
+                    VALUES ($1, $2, $3, $4::vector)
+                    """,
+                    [
+                        (
+                            document_id,
+                            chunk["ref_article"],
+                            chunk["contenu"],
+                            ingestion.to_pgvector(vector),
+                        )
+                        for chunk, vector in zip(document["chunks"], embeddings["vectors"])
+                    ],
+                )
+                await conn.execute(
+                    "UPDATE compliance_document SET corpus_hash = $2 WHERE id = $1",
+                    document_id,
+                    new_hash,
+                )
+        report["regenerated"] += 1
+        report["chunks_added"] += len(document["chunks"])
     return report
 
 

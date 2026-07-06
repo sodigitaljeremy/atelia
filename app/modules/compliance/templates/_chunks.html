@@ -12,7 +12,7 @@
         <span class="mono" style="margin-left: auto; color: var(--muted);">
           similarité {{ "%.3f" | format(c.similarite) }}</span>
       </div>
-      <p style="font-size: 14px; margin-top: 10px; white-space: pre-line;">{{ c.contenu[:600] }}{% if c.contenu | length > 600 %}…{% endif %}</p>
+      <p style="font-size: 14px; margin-top: 10px; white-space: pre-line;">{{ c.contenu | extrait(600) }}</p>
     </div>
   {% endfor %}
   <p class="transparency">

@@ -25,3 +25,8 @@ CREATE TABLE IF NOT EXISTS compliance_chunk (
 
 -- Pas d'index ANN (ivfflat/hnsw) : corpus de quelques dizaines de chunks, la recherche
 -- exacte est à la fois plus juste et plus simple. À revoir si le corpus grossit vraiment.
+
+-- Lot 2 : détection de changement du corpus. Le hash du contenu chunké permet à
+-- l'ingestion de régénérer les embeddings quand le pipeline de nettoyage évolue
+-- (hash différent → chunks supprimés et ré-indexés), tout en restant no-op sinon.
+ALTER TABLE compliance_document ADD COLUMN IF NOT EXISTS corpus_hash TEXT;

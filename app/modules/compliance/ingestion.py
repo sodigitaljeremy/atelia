@@ -55,8 +55,69 @@ CURATED_REFS = {
 # Bruit EUR-Lex consolidé : marqueurs de version (▼B, ▼M5, ►C1…), notes « ( 1 ) JO L … »,
 # lignes d'en-tête de pagination « 02011R1169 — FR — 01.04.2025 — 008.001 — 12 »
 _NOISE_LINE = re.compile(
-    r"^(?:[▼►]\s?[BMC]?\d*\s*$|\(\s?\d+\s?\)\s+JO\b.*|02011R1169\b.*—.*\d+\s*$)"
+    r"^(?:[▼►]\s?[BMC]?\d*\s*—*\s*$|\(\s?\d+\s?\)\s+JO\b.*|02011R1169\b.*—.*\d+\s*$)"
 )
+
+# Nettoyage INLINE (Lot 2) — uniquement des MARQUEURS, jamais du contenu réglementaire :
+# ►C1 … ◄ (rectificatifs : on garde le texte, on retire les bornes), ▼M5 résiduels,
+# runs de tirets de consolidation, renvois de notes au format espacé « ( 1 ) »
+# (le « (1) » collé et « paragraphe 1 » du texte juridique ne matchent pas).
+_INLINE_MARKERS = re.compile(r"►\s?C\d+\s?|\s?◄|[▼►]\s?[BMC]?\d*\s?|—{3,}")
+_FOOTNOTE_REF = re.compile(r"\s?\(\s\d+\s\)")
+
+# Marqueur de liste orphelin (« a) », « 12) », « iv) » seul sur sa ligne) : fusionné
+# avec la ligne suivante — jamais supprimé.
+_ORPHAN_MARKER = re.compile(r"^(?:[a-z]|[ivxl]{1,4}|\d{1,2})\)$")
+
+# Cellule-unité des tableaux nutritionnels (Annexe XV) : fusionnée dans la ligne
+# précédente (« matières grasses — g ») pour garder l'information sans casser l'affichage.
+_UNIT_CELL = re.compile(r"^(?:g|mg|µg|μg|kJ|kcal|kJ/kcal|%)$")
+
+# Numéro de repère isolé (légende du schéma « hauteur de x », Annexe IV) : fusionné
+# avec son libellé qui suit (« 1 — Ligne ascendante »).
+_LEGEND_NUM = re.compile(r"^\d{1,2}$")
+
+# Une ligne d'en-tête d'unité (Article N / ANNEXE X) ne doit JAMAIS recevoir de fusion :
+# on y collerait un marqueur et la détection de sections serait cassée.
+_HEADING_LIKE = re.compile(r"^(?:Article\s+\d+|ANNEXE\s+[IVXLC]+)\b")
+
+
+def clean_lines(lines: list[str]) -> list[str]:
+    """Nettoyage post-extraction : marqueurs retirés, fragments orphelins FUSIONNÉS.
+
+    Règle : on ne supprime jamais de contenu réglementaire — on retire des marqueurs
+    d'édition et on recolle ce que la structure HTML avait éclaté.
+    """
+    cleaned: list[str] = []
+    pending: str | None = None  # marqueur de liste ou n° de repère en attente de son libellé
+    pending_sep = " "
+    for raw in lines:
+        line = _INLINE_MARKERS.sub(" ", raw)
+        line = _FOOTNOTE_REF.sub("", line)
+        line = " ".join(line.replace(" ", " ").split())
+        if not line:
+            continue
+        if _ORPHAN_MARKER.match(line) or _LEGEND_NUM.match(line):
+            if pending is not None:
+                cleaned.append(pending)
+            pending = line
+            pending_sep = " — " if _LEGEND_NUM.match(line) else " "
+            continue
+        if pending is not None:
+            if _HEADING_LIKE.match(line):  # jamais de fusion sur un en-tête de section
+                cleaned.append(pending)
+            else:
+                line = f"{pending}{pending_sep}{line}"
+            pending = None
+        if _UNIT_CELL.match(line) and cleaned:
+            cleaned[-1] = f"{cleaned[-1]} — {line}"
+            continue
+        cleaned.append(line)
+    if pending is not None:  # marqueur en toute fin : on le garde plutôt que le perdre
+        cleaned.append(pending)
+    return cleaned
+
+
 _ARTICLE_LINE = re.compile(r"^Article\s+(\d+)\s*(?:er)?\s*$")
 _ANNEXE_LINE = re.compile(r"^ANNEXE\s+([IVXLC]+)\s*$")
 
@@ -162,7 +223,7 @@ def html_to_lines(raw_html: str | bytes) -> list[str]:
         text = " ".join(block.text_content().split())
         if text and not _NOISE_LINE.match(text):
             lines.append(text)
-    return lines
+    return clean_lines(lines)
 
 
 def extract_markdown_from_html(raw_html: str, curated_refs: set[str] | None = None) -> str:

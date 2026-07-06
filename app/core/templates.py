@@ -26,6 +26,15 @@ def _fmt_qty(value) -> str:
     return text.replace(".", ",")
 
 
+def _excerpt(value, length: int = 400) -> str:
+    """Tronque au dernier mot entier avant `length` — jamais de coupe en plein mot."""
+    text = value or ""
+    if len(text) <= length:
+        return text
+    cut = text[:length].rsplit(" ", 1)[0].rstrip(",;:.")
+    return f"{cut}…"
+
+
 def _global_context(request) -> dict:
     # Import local : le registre importe les modules, qui importent ce fichier.
     from app.core import registry
@@ -38,4 +47,5 @@ def module_templates(module_dir: Path | None = None) -> Jinja2Templates:
     templates = Jinja2Templates(directory=directories, context_processors=[_global_context])
     templates.env.filters["eur"] = _fmt_eur
     templates.env.filters["qty"] = _fmt_qty
+    templates.env.filters["extrait"] = _excerpt
     return templates
