@@ -1,127 +1,106 @@
 # AtelIA — l'atelier IA d'une PME (fictive)
 
-**Plateforme de démonstration AI Engineering** : des cas d'usage métier réels, résolus chacun
-avec la technique adaptée — et jamais un LLM plaqué là où il n'apporte rien.
+**Plateforme de démonstration AI Engineering** : quatre problèmes métier réels d'une PME
+agroalimentaire fictive (« Conservia »), résolus chacun avec la technique adaptée — et
+jamais un LLM plaqué là où il n'apporte rien.
 
-Démo live : **[atel-ia.fr](https://atel-ia.fr)** · Roadmap : [docs/brief-v2.md](docs/brief-v2.md) ·
-Architecture : [docs/arch/](docs/arch/README.md)
+**Démo live : [atel-ia.fr](https://atel-ia.fr)** · [Roadmap](docs/brief-v2.md) ·
+[Architecture (arc42 + ADR)](docs/arch/README.md)
 
-## 1. Le problème
+<!-- 📸 CAPTURE 1 : le hub d'accueil (les 4 tuiles) -->
 
-Intégrer l'IA dans une PME, ce n'est pas brancher un chatbot : c'est diagnostiquer un besoin
-métier, choisir l'approche qui le résout au juste coût — **déterministe** quand la donnée est
-structurée et fiable, **RAG** pour le documentaire, **agent** pour l'orchestration,
-**classification** pour le non-structuré — et garder un humain dans la boucle dès qu'une
-décision engage. C'est cette capacité de diagnostic que la plateforme démontre, sur pièce.
+## Le problème démontré
 
-## 2. La plateforme et sa démarche
+Intégrer l'IA en entreprise, ce n'est pas brancher un chatbot : c'est diagnostiquer un
+besoin et choisir l'approche qui le résout au juste coût — **déterministe** quand la donnée
+est structurée, **RAG** pour le documentaire, **agent** pour l'orchestration,
+**classification** pour le non-structuré — avec un humain dans la boucle dès qu'une
+décision engage. C'est cette capacité de diagnostic que la plateforme prouve, sur pièce.
 
-AtelIA incarne une PME agroalimentaire **fictive**, « Conservia » (aucune entreprise
-réelle nommée, nom paramétrable). Chaque module part d'un problème concret de cette PME, le
-résout de bout en bout, et se mesure.
+## Les 4 modules
 
-- **Souveraine** : modèles Mistral par défaut, self-hosté, swap vers Claude en une variable de config.
-- **Human-in-the-loop** : aucune écriture ni décision engageante sans validation d'un opérateur.
-- **Données sûres** : publiques (API et textes officiels) ou synthétiques — jamais de donnée privée réelle.
-- **Toujours démontrable** : chaque tranche livrée est déployée ; la plateforme n'est jamais un chantier.
+| Module | Technique prouvée | Vraie donnée | Statut |
+|---|---|---|---|
+| 🧾 Factures | Extraction déterministe + human-in-the-loop | Factur-X synthétiques (EN 16931) | ✅ déployé |
+| 📚 Conformité | RAG sourcé, citations obligatoires | Règlement INCO 1169/2011 (EUR-Lex officiel) | ✅ déployé |
+| 🔎 Fournisseurs | Agent function-calling multi-API | API d'État live (RNE/Sirene, BODACC) | ✅ déployé |
+| 📨 Triage | Classification LLM zero-shot encadrée | Messages synthétiques | ✅ déployé |
 
-## 3. Les modules
+### 🧾 Factures fournisseurs — le déterminisme assumé
 
-### 🧾 Factures fournisseurs — livré
+Le XML Factur-X embarqué fait foi : extraction **sans aucun LLM**, exacte à 100 %.
+Contrôles automatiques (totaux, TVA, dates, doublons) avec sévérités, validation humaine
+obligatoire (les cas bloquants exigent une confirmation explicite, vérifiée côté serveur),
+gains mesurés dans un **journal append-only jamais recalculé** (auditabilité), export ERP
+en JSON.
 
-La saisie manuelle d'une facture papier coûte ~15 € et ~5 min ([France Num](https://www.francenum.gouv.fr/) ;
-fourchette 14–20 € selon le rapport IGF/DGFiP sur la facturation électronique). Le module :
+### 📚 Assistant conformité — le RAG qui sait dire « je ne sais pas »
 
-- **Extraction déterministe** du XML CII embarqué dans les PDF Factur-X (profil EN 16931) —
-  zéro LLM : quand le standard fait foi, les règles suffisent et le résultat est exact à 100 %.
-- **Contrôles automatiques à l'ingestion** : cohérence des totaux (tolérance d'arrondi), taux de
-  TVA plausibles, dates (échéance incohérente ou déjà dépassée), montants, fournisseur étranger —
-  chaque anomalie avec sa sévérité (bloquant / avertissement).
-- **Doublons** : même fournisseur + même numéro déjà en base → signalé, validation sous
-  confirmation explicite (vérifiée côté serveur).
-- **Checklist conformité** : présence des mentions attendues (SIREN, numéro, dates, montants) —
-  vérification factuelle, affichée avec son disclaimer : ce n'est pas un avis juridique.
-- **Gains auditables** : journal d'événements **append-only** (un gain acté à chaque validation,
-  jamais recalculé rétroactivement), historique daté, courbe cumulée, simulateur à curseurs et
-  tarif paramétrable — les hypothèses sont affichées comme des estimations à calibrer.
-- **Export ERP** : API JSON documentée (`POST /api/invoices` pour pousser un PDF,
-  `GET /api/invoices?status=validee` pour ne récupérer que le validé par un humain).
+Le texte officiel du règlement INCO (consolidé EUR-Lex) est chunké **par article**
+(unité citable), vectorisé (mistral-embed) dans **pgvector**. Les réponses sont générées
+uniquement depuis les passages retrouvés, **citent leurs articles**, et les sources
+s'affichent pour vérification. Hors corpus, défense en deux couches : un seuil de
+similarité coupe le hors-sujet **avant tout appel LLM**, et le grounding du prompt refuse
+le reste — testé sur « quel est le taux de TVA ? » : réponse « je ne trouve pas », zéro invention.
 
-9 factures de démo téléchargeables depuis l'UI, dont 3 volontairement incohérentes
-(préfixe `anomalie_`) pour voir les contrôles réagir.
+### 🔎 Fiabilité fournisseurs — un vrai agent, un score qui ne ment pas
 
-### À venir (cadrés dans le [brief v2](docs/brief-v2.md), non construits)
+Le modèle **décide lui-même** d'appeler ses outils (function-calling, `tool_choice=auto`) :
+il identifie l'entreprise via l'API Recherche d'entreprises, réutilise le SIREN pour
+interroger le **BODACC** (procédures collectives), et son raisonnement s'affiche tour par
+tour. Le score de fiabilité est **calculé en code** (barème fixe, entreprise cessée
+éliminatoire) — le LLM le reçoit et le commente, il ne le produit jamais. Les alertes
+BODACC viennent de la donnée brute de l'API, pas du texte du modèle.
 
-- **Assistant conformité** (M2) : RAG sourcé sur textes publics (INCO/allergènes, facturation
-  électronique, HACCP) — citations obligatoires, « je ne sais pas » hors corpus.
-- **Fiabilité fournisseurs** (M3) : agent en function-calling sur API publiques officielles
-  (Recherche d'entreprises/Sirene, BODACC) → fiche enrichie + score expliqué.
-- **Triage de flux entrants** (M4, option) : classification LLM de textes libres
-  (catégorie, priorité, routage).
+<!-- 📸 CAPTURE 2 : la timeline de l'agent (2 tool_calls) + le score expliqué -->
 
-## 4. Architecture
+### 📨 Triage des messages — le zero-shot sous contrainte
 
-Un **socle** (`app/core/`) héberge des **modules enfichables** (`app/modules/`), découverts par un
-registre : un module = un package exposant son contrat (router UI+API, `schema.sql` idempotent
-appliqué au démarrage, métadonnées de navigation, hook de démarrage optionnel). Le hub d'accueil
-et la navigation se génèrent depuis ce registre — ajouter un module = déposer un dossier.
-Détails : [vue des briques](docs/arch/05-vue-des-briques.md) · décisions :
+Classification de messages entrants (réclamations, demandes) en zero-shot : catégories et
+priorités **fermées par le typage** (validation Pydantic, retry motivé si le JSON dévie).
+Et parce qu'on ne confie pas le critique à un LLM : un **garde-fou déterministe** force la
+priorité « critique » sur tout signal de sécurité alimentaire — même quand le message a
+l'air anodin (« petite remarque : des traces de noisette non mentionnées… »).
+
+<!-- 📸 CAPTURE 3 : le message « anodin » forcé en Sécurité/critique par le garde-fou -->
+
+## Le fil rouge
+
+- **Couche LLM agnostique** : tout appel passe par LiteLLM → Mistral (souverain) ;
+  basculer vers Claude = une variable d'environnement.
+- **Le LLM travaille, le code décide du critique** : score fournisseurs, garde-fou
+  sécurité, seuil hors-corpus, alertes — tout ce qui engage est déterministe.
+- **Human-in-the-loop** : aucune écriture sans validation d'un opérateur.
+- **Données publiques ou synthétiques uniquement** — zéro donnée personnelle réelle (RGPD).
+- **Prouvé et livré en continu** : 85 tests, chaque tranche déployée avant la suivante.
+
+## Architecture
+
+Un socle (`app/core/` : config, DB, couche LLM, registre) héberge des **modules
+enfichables** (`app/modules/`) : un module = un package exposant son contrat (routes,
+schéma SQL idempotent appliqué au démarrage, métadonnées, hook d'initialisation). Le hub
+et la navigation se génèrent depuis le registre — ajouter un cas d'usage = déposer un
+dossier. Détails : [arc42](docs/arch/README.md), décisions dans les
 [ADR-101…107](docs/arch/09-decisions-architecture.md).
 
-## 5. Stack
+## Stack
 
-Python 3.12 · FastAPI · PostgreSQL + **pgvector** · **LiteLLM** → Mistral
-(`mistral-large`, `mistral-embed`), swappable Claude en config · Jinja2 + HTMX (pas de build
-front) · uv · Docker/Compose · déployé via Coolify.
+Python 3.12 · FastAPI · PostgreSQL + **pgvector** · **LiteLLM** → Mistral (swappable) ·
+Jinja2 + HTMX (zéro build front) · uv · Docker Compose · Coolify/Hetzner, auto-deploy sur
+push `main` ([détails déploiement](docs/arch/07-vue-deploiement.md)).
 
-## 6. Démo live
-
-**[atel-ia.fr](https://atel-ia.fr)** — téléchargez une facture d'exemple depuis la page Factures,
-déposez-la, contrôlez, validez, regardez les gains bouger. C'est une démo publique : les données
-sont synthétiques et réinitialisables.
-
-## 7. Lancement local
+## Lancement local
 
 ```bash
 cp .env.example .env   # renseigner MISTRAL_API_KEY et POSTGRES_PASSWORD
 docker compose up --build
 ```
 
-- UI : http://localhost:8000 · API : http://localhost:8000/docs
-- `curl localhost:8000/health` → 200 (API + Postgres + pgvector) ·
-  `curl localhost:8000/llm/ping` → test chat + embedding Mistral
+- UI : http://localhost:8000 · API : http://localhost:8000/docs · santé : `/health`
 - Tests et lint : `uv run pytest` · `uv run ruff check .`
-- Samples régénérables : `uv run scripts/generate_samples.py` (valides) et
-  `uv run scripts/generate_broken_samples.py` (incohérents exprès)
 
-En local, `docker-compose.override.yml` (chargé automatiquement) publie le port 8000 ;
-le fichier de base n'expose aucun port — en prod c'est le reverse proxy qui s'en charge.
+## Note honnête
 
-## Déploiement Coolify
-
-1. Ressource **Docker Compose** pointant sur ce dépôt (`docker-compose.yml` ; l'override local
-   n'est pas chargé). Auto-deploy sur push `main`.
-2. Variables d'environnement : `MISTRAL_API_KEY` (requis), `POSTGRES_PASSWORD` (requis, valeur
-   forte — le compose refuse de démarrer sans), `DEMO_MODE=false` recommandé en prod (désactive
-   le bouton de réinitialisation), `LLM_MODEL`/`EMBED_MODEL` optionnels.
-3. Exposer le service **`api`** sur son port interne **8000** (Traefik/Coolify gère domaine et
-   TLS). Postgres n'est jamais publié.
-4. Healthcheck compose sur `/health` : le trafic ne bascule que lorsqu'il est vert.
-5. Persistance : volume `pgdata`. Attention : Postgres fige `POSTGRES_PASSWORD` au premier
-   démarrage du volume (changer la variable ensuite nécessite un `ALTER USER`).
-
-## État d'avancement
-
-- [x] Socle FastAPI + Postgres/pgvector + couche LLM (LiteLLM/Mistral) + Docker
-- [x] Module Factures — happy path : extraction Factur-X déterministe, validation humaine, gains
-- [x] Refactor plateforme : socle + modules + registre, hub, page Démarche, anonymisation
-- [x] Module Factures — robustesse : anomalies, doublons, conformité, export ERP
-- [x] Module Factures — démo complète, journal de gains append-only, hypothèses sourcées,
-      simulateur, tarif runtime, reset démo
-- [ ] M2 — Assistant conformité (RAG sourcé sur pgvector)
-- [ ] M3 — Fiabilité fournisseurs (agent + API publiques)
-- [ ] M4 — Triage de flux entrants (classification, option)
-
----
-
-*Historique : [brief v1](docs/brief.md) (POC d'origine) · [brief v2](docs/brief-v2.md) (plateforme, source de vérité).*
+Conservia est une **PME fictive**. Les factures et messages sont synthétiques ; le corpus
+réglementaire et les API d'entreprises sont réels et publics. AtelIA est un
+**démonstrateur** de pratiques d'intégration IA — pas un produit en exploitation.
