@@ -24,7 +24,9 @@ publie `8000:8000` ; Coolify lance explicitement le fichier de base et l'ignore.
   `POSTGRES_PASSWORD`, `DEMO_MODE`, `LLM_MODEL`/`EMBED_MODEL`). Jamais commitées
   (`.env` local gitignoré).
 - **Démarrage applicatif** : le lifespan applique les `schema.sql` idempotents de chaque module
-  puis leurs hooks `on_startup` (ex. backfill des gains) — pas d'étape de migration séparée.
+  puis leurs hooks `on_startup` (backfill des gains M1 ; ingestion du corpus M2 par empreinte
+  de contenu — la prod se ré-indexe seule quand le corpus ou son nettoyage change) — pas
+  d'étape de migration séparée.
 
 ## Pièges connus
 

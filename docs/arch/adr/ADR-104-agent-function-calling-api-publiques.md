@@ -1,6 +1,6 @@
 # ADR-104 — Agent M3 : function-calling sur API publiques officielles
 
-**Statut** : Accepté, non encore implémenté (prévu Slice M3)
+**Statut** : Accepté / implémenté (Slices M3-a, M3-b1, M3-b2, module `suppliers`)
 **Date** : 2026-07-05
 
 ## Contexte
@@ -35,8 +35,15 @@ publiques officielles** :
 - Passerelle prévue avec M1 : enrichir le fournisseur d'une facture (SIREN déjà extrait).
 - **Compromis / limites** :
   - dépendance à la disponibilité et aux quotas d'API tierces — d'où timeouts et repli
-    obligatoires dès la conception ;
-  - `app/core/llm.py` n'expose aujourd'hui que `complete` et `embed` : le support du
-    function-calling devra y être ajouté (extension de la couche, pas contournement) ;
-  - **rien de M3 n'existe à ce jour** : cet ADR fige l'approche et les garde-fous, pas
-    une implémentation.
+    obligatoires dès la conception (une erreur d'outil est renvoyée au modèle comme une
+    donnée, jamais un crash ; une erreur LLM rend un message propre).
+
+**Implémentation (M3)** : la couche socle a été étendue comme prévu
+(`llm.complete_messages(messages, tools)`, format OpenAI standard, `tool_choice="auto"`).
+Deux outils réels : `rechercher_entreprise` (API Recherche d'entreprises — RNE + Sirene)
+et `rechercher_procedures_bodacc` (BODACC/DILA, SIREN validé strictement avant la clause
+ODSQL). Le modèle orchestre seul l'enchaînement, tracé dans une timeline affichée
+(tool_call ids). Au-delà de l'ADR initial : le **score de fiabilité est calculé en code**
+(barème fixe, cessée éliminatoire) — le LLM le reçoit et le commente, il ne le produit
+jamais ; l'alerte procédures est rendue depuis la donnée brute de l'API. Open Food Facts
+(volet produit) : non retenu à ce jour, sans besoin démontré.

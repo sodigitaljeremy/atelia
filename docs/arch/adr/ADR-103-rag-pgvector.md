@@ -1,6 +1,6 @@
 # ADR-103 — RAG sur pgvector (mono-base, souverain)
 
-**Statut** : Accepté, non encore implémenté (prévu Slice M2)
+**Statut** : Accepté / implémenté (Slices M2-a et M2-b, module `compliance`)
 **Date** : 2026-07-05
 
 ## Contexte
@@ -31,6 +31,12 @@ Faire le RAG de M2 sur **pgvector**, dans la base PostgreSQL existante :
   - pgvector est moins riche qu'une base vectorielle dédiée (tuning d'index, filtrage
     hybride avancé, scaling horizontal) — acceptable pour un corpus petit et net, qui est
     le périmètre affiché de M2 ;
-  - à ce jour **rien du RAG n'existe** (ni table d'embeddings, ni chunking, ni retrieval) :
-    seule l'extension est installée et vérifiée. Cet ADR fige le choix d'infra, pas une
-    implémentation.
+  - pas d'index ANN (recherche exacte assumée pour ~31 chunks — commenté dans le schéma).
+
+**Implémentation (M2-a/M2-b)** : tables `compliance_document`/`compliance_chunk`
+(`vector(1024)`), chunking **par article** (unité citable, réf conservée), corpus =
+texte officiel INCO consolidé (EUR-Lex, CELEX 02011R1169), ingestion idempotente par
+**empreinte de contenu** (`corpus_hash` : régénération automatique au déploiement si le
+pipeline change, no-op sinon), recherche cosinus + génération citée avec défense
+hors-corpus en deux couches (seuil de similarité avant tout appel LLM + grounding strict
+du prompt).

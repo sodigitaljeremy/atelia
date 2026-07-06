@@ -17,7 +17,9 @@ un LLM partout.*
 | Mesure honnête de la valeur | Journal de gains append-only, hypothèses sourcées et paramétrables (ADR-107) |
 | Architecture évolutive | Socle + modules enfichables via registre (ADR-101) |
 | Souveraineté sans enfermement | Couche LLM agnostique, Mistral ↔ Claude en config (ADR-106) |
-| RAG, agent, classification | *À venir* — M2/M3/M4, cadrés dans le brief v2, non construits |
+| RAG sourcé (citations, « je ne sais pas » hors corpus) | Module Conformité : corpus INCO officiel indexé (pgvector), génération ancrée (`rag.py`) |
+| Agent en vrai function-calling multi-API | Module Fournisseurs : le modèle orchestre 2 API d'État (`agent.py`), score calculé en code |
+| Classification encadrée du non-structuré | Module Triage : zero-shot sous validation Pydantic + garde-fou sécurité déterministe (`classifier.py`) |
 
 ## Exigences clés
 

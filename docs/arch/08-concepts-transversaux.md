@@ -15,8 +15,12 @@ chaîne en conditions réelles. Aucun module n'importe un SDK de fournisseur.
 Là où la donnée est structurée et normée, pas de LLM : l'extraction Factur-X
 (`app/modules/invoices/extraction.py`) lit le XML CII qui fait foi (XPath, `confidence = 1.0`),
 et les contrôles (`checks.py`) sont des règles pures — totaux, TVA, dates, doublons. Résultat
-exact, testable unitairement, gratuit à l'exécution. Les techniques LLM (RAG, agent,
-classification) sont réservées aux problèmes qui en ont besoin (M2/M3/M4, à venir).
+exact, testable unitairement, gratuit à l'exécution. Les techniques LLM sont réservées aux
+problèmes qui en ont besoin : RAG (Conformité), agent (Fournisseurs), classification (Triage).
+Et même là, **le code décide du critique** : score fournisseurs calculé par barème
+(`agent.grade`), garde-fou sécurité du triage (`classifier.security_guard`), seuil
+hors-corpus du RAG (`rag.SIMILARITY_THRESHOLD`) — le LLM travaille, il ne tranche jamais
+seul ce qui engage.
 
 ## 3. Human-in-the-loop
 
@@ -36,8 +40,8 @@ entièrement (reset démo, doublement gardé) ou pas du tout.
 ## 5. Souveraineté
 
 Mistral par défaut (modèles européens), self-hosté sur infra européenne (Hetzner), base de
-données locale au déploiement (pgvector dans le même Postgres — ADR-103 pour le futur RAG).
-Le swap de fournisseur reste possible (concept 1) : souverain sans être enfermé.
+données locale au déploiement (pgvector dans le même Postgres — ADR-103, le RAG de M2 y
+tourne). Le swap de fournisseur reste possible (concept 1) : souverain sans être enfermé.
 
 ## 6. Données publiques et synthétiques uniquement (ADR-102, ADR-105)
 

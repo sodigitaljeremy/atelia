@@ -1,6 +1,6 @@
 # ADR-105 — Données publiques + synthétiques uniquement
 
-**Statut** : Accepté — appliqué sur M1 (volet synthétique) ; volet données publiques à venir avec M2/M3
+**Statut** : Accepté / appliqué sur les 4 modules (synthétique : M1, M4 · publique : M2, M3)
 **Date** : 2026-07-05
 
 ## Contexte
@@ -21,9 +21,9 @@ donnée privée réelle.
 | Donnée | Type | Module | État |
 |---|---|---|---|
 | Factures Factur-X EN 16931 (`scripts/generate_samples.py`) | Synthétique | M1 | **En place** |
-| Règlement (UE) 1169/2011, textes facturation électronique, HACCP | Publique | M2 | À venir |
-| API Recherche d'entreprises / Sirene, BODACC, Open Food Facts | Publique (live) | M3 | À venir |
-| Réclamations / emails | Synthétique | M4 (option) | À venir |
+| Règlement (UE) 1169/2011 consolidé (EUR-Lex, texte officiel) | Publique | M2 | **En place** |
+| API Recherche d'entreprises (RNE + Sirene) et BODACC | Publique (live) | M3 | **En place** |
+| Messages entrants (réclamations, demandes) | Synthétique | M4 | **En place** |
 
 Les fournisseurs figurant dans les factures synthétiques sont eux-mêmes fictifs
 (noms, SIREN et adresses inventés), en cohérence avec ADR-102.
@@ -36,8 +36,8 @@ Les fournisseurs figurant dans les factures synthétiques sont eux-mêmes fictif
 - **Compromis / limites** :
   - le synthétique ne reproduit pas la variété du réel (factures propres, bien formées) —
     assumé pour le happy path, les cas dégradés seront eux aussi synthétiques ;
-  - les SIREN inventés des samples ne correspondront à rien dans les API publiques de M3 :
-    la passerelle M1→M3 devra utiliser des SIREN réels d'entreprises publiques ou gérer
-    le « non trouvé » ;
-  - seul le volet synthétique (M1) existe à ce jour ; le volet « données publiques »
-    n'arrivera qu'avec M2/M3.
+  - les SIREN inventés des samples M1 ne correspondent à rien dans les API publiques de
+    M3 : une éventuelle passerelle M1→M3 devra utiliser des SIREN réels d'entreprises
+    publiques ou gérer le « non trouvé » (passerelle non construite à ce jour) ;
+  - le module M3 est volontairement affiché comme **hors de la fiction** Conservia :
+    il interroge de vraies entreprises, la séparation est explicite dans l'UI (ADR-102).
