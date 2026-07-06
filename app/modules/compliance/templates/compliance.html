@@ -7,10 +7,28 @@
   </p>
 
   <div class="alert" style="background: #f0e6c8; border-color: #dcc98f; color: #7a5f18;">
-    <b>Phase 1 — recherche sémantique brute</b> : les passages du texte officiel sont
-    retrouvés par similarité, pas interprétés. La réponse rédigée avec citations
-    obligatoires arrive en phase 2.
+    Deux modes : <b>question → réponse citée</b> (RAG : le modèle ne s'appuie que sur les
+    passages retrouvés, cite ses articles, et dit « je ne trouve pas » hors corpus) et
+    <b>recherche sémantique brute</b> (les passages, sans interprétation).
   </div>
+
+  <h2>Poser une question — réponse citée</h2>
+  <div class="card">
+    <form hx-post="/compliance/ask" hx-target="#answer" hx-indicator="#ask-loading"
+          style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 260px;">
+        <label for="ask-q">Votre question sur l'étiquetage / les allergènes</label>
+        <input type="text" id="ask-q" name="q" placeholder="ex. quels allergènes faut-il déclarer ?"
+               style="width: 100%; padding: 8px 10px; font-family: var(--mono); font-size: 14px;
+                      border: 1px solid var(--line); border-radius: 3px;">
+      </div>
+      <button type="submit" class="btn btn-primary">Demander</button>
+      <span id="ask-loading" class="htmx-indicator" style="font-family: var(--sans); font-size: 13px; color: var(--muted);">
+        ⏳ retrieval + génération…</span>
+    </form>
+  </div>
+
+  <div id="answer" style="margin-top: 20px;"></div>
 
   <h2>Corpus indexé</h2>
   <div class="card" style="padding: 8px 16px;">
@@ -36,7 +54,7 @@
     {% endif %}
   </div>
 
-  <h2>Tester la recherche sémantique</h2>
+  <h2>Recherche sémantique brute (les passages, sans interprétation)</h2>
   <div class="card">
     <form hx-post="/compliance/search" hx-target="#chunks" hx-indicator="#search-loading"
           style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">

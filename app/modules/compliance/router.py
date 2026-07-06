@@ -4,8 +4,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, Form, Request
 
-from app.modules.compliance import repository
 from app.core.templates import module_templates
+from app.modules.compliance import rag, repository
 
 templates = module_templates(Path(__file__).parent / "templates")
 
@@ -19,6 +19,22 @@ async def compliance_home(request: Request):
         request,
         "compliance.html",
         {"documents": documents, "active": "compliance"},
+    )
+
+
+@router.post("/compliance/ask")
+async def compliance_ask(request: Request, q: str = Form("")):
+    """Fragment HTMX : réponse RAG citée — grounding strict, sources issues du retrieval."""
+    q = q.strip()
+    if not q:
+        return templates.TemplateResponse(
+            request, "_answer.html", {"error": "Posez une question.", "result": None, "query": q}
+        )
+    result = await rag.answer(q)
+    return templates.TemplateResponse(
+        request,
+        "_answer.html",
+        {"query": q, "result": result, "error": result["error"]},
     )
 
 

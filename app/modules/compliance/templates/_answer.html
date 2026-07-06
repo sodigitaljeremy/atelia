@@ -1,0 +1,34 @@
+{% if error %}
+  <div class="alert">{{ error }}</div>
+{% elif result %}
+  <h2>Réponse — « {{ query }} »</h2>
+  <div class="card" {% if result.hors_corpus %}style="border-left: 4px solid var(--gold);"{% endif %}>
+    <p style="font-size: 15px; white-space: pre-line;">{{ result.answer }}</p>
+    {% if result.hors_corpus %}
+      <p style="font-family: var(--sans); font-size: 12.5px; color: var(--muted); margin-top: 10px;">
+        Aucun passage du corpus n'a dépassé le seuil de pertinence : l'assistant ne tente
+        pas de répondre plutôt que de risquer d'inventer.
+      </p>
+    {% endif %}
+  </div>
+
+  {% if result.sources %}
+    <h2>Sources utilisées — à vérifier</h2>
+    {% for s in result.sources %}
+      <div class="card" style="margin-bottom: 12px; padding: 14px 20px;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span class="badge ok">{{ s.ref_article }}</span>
+          <span class="mono" style="margin-left: auto; color: var(--muted); font-size: 12px;">
+            similarité {{ "%.3f" | format(s.similarite) }}</span>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 8px; white-space: pre-line;">
+          {{ s.contenu[:400] }}{% if s.contenu | length > 400 %}…{% endif %}</p>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px;">
+    Réponse générée par IA (Mistral) à partir du texte officiel indexé ; vérifiez toujours
+    les sources citées. Ne constitue pas un conseil juridique.
+  </p>
+{% endif %}
