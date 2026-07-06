@@ -109,6 +109,21 @@
     .example-btn small { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
     .transparency { font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px; }
     .htmx-indicator.loading { font-family: var(--sans); font-size: 13px; color: var(--muted); }
+    /* Tuiles du hub — ici et pas dans extra_css : hx-boost ne remplace que le <body>,
+       les styles de page du <head> sont perdus en navigation (bug constaté au CDP) */
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: stretch; }
+    .tile { display: flex; flex-direction: column; align-items: flex-start; text-decoration: none; color: var(--ink); transition: box-shadow 0.15s; }
+    .tile:hover { box-shadow: 0 3px 10px rgba(36, 40, 30, 0.12); }
+    .tile .tile-icon { font-size: 28px; }
+    .tile h3 { font-size: 20px; font-weight: 600; margin: 10px 0 6px; }
+    .tile p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
+    .tile .open { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--green); margin-top: auto; padding-top: 12px; display: inline-block; }
+    /* Cartes stat du dashboard — même raison */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .stat .stat-label { font-family: var(--sans); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.4px; color: var(--muted); }
+    .stat .stat-value { font-family: var(--mono); font-size: 40px; font-variant-numeric: tabular-nums; margin: 6px 0 2px; color: var(--green-deep); }
+    .stat .stat-note { font-family: var(--sans); font-size: 12.5px; color: var(--muted); }
+    .stat.accent { border-left: 4px solid var(--gold); }
     .field-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 20px; }
     .alert {
       background: var(--terra-soft); border: 1px solid var(--terra); color: var(--terra);
