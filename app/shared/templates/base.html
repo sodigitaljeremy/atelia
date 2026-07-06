@@ -44,7 +44,7 @@
     .brand { font-size: 22px; letter-spacing: 0.5px; }
     .brand b { font-weight: 700; }
     .brand small { font-family: var(--sans); font-size: 11px; color: #cdc7ae; letter-spacing: 1.6px; text-transform: uppercase; margin-left: 12px; }
-    nav { margin-left: auto; display: flex; gap: 4px; font-family: var(--sans); font-size: 13.5px; }
+    nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px; font-family: var(--sans); font-size: 13.5px; }
     nav a {
       color: #d8d2ba; text-decoration: none; padding: 5px 14px;
       border-radius: 3px; letter-spacing: 0.4px;
@@ -59,6 +59,7 @@
       background: var(--card); border: 1px solid var(--line);
       border-radius: 4px; padding: 22px 24px;
       box-shadow: 0 1px 0 rgba(36, 40, 30, 0.05);
+      overflow-x: auto; /* mobile : un tableau large défile DANS sa carte, jamais la page */
     }
     table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
     th {
@@ -119,6 +120,19 @@
       font-family: var(--sans); font-size: 12px; color: var(--muted); letter-spacing: 0.3px;
     }
     footer::before { content: ""; display: block; border-top: 1px solid var(--line); margin-bottom: 12px; }
+    /* Mobile : tout doit tenir dans la largeur de l'écran (aucun scroll latéral de page) */
+    @media (max-width: 640px) {
+      main { padding: 24px 14px 48px; }
+      .topbar-inner { padding: 10px 14px; gap: 8px; }
+      nav { margin-left: 0; width: 100%; font-size: 13px; }
+      nav a { padding: 4px 10px; }
+      h1 { font-size: 24px; }
+      .field-grid { grid-template-columns: 1fr; }
+      .field-grid > div { grid-column: auto !important; }
+      input, textarea, select { min-width: 0; max-width: 100%; }
+      .example-btn { max-width: 100%; }
+      footer { padding: 0 14px 24px; }
+    }
     {% block extra_css %}{% endblock %}
   </style>
 </head>

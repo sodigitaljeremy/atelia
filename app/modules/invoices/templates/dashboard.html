@@ -59,8 +59,8 @@
 
   <h2>Simulateur — et si vos coûts réels étaient différents ?</h2>
   <div class="card">
-    <form action="/dashboard/apply-rates" method="post"
-          style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 28px; align-items: end;">
+    <form action="/dashboard/apply-rates" method="post" class="simulator-grid"
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; align-items: end;">
       <div>
         <label for="sim-cost">Coût évité par facture : 5–25 €</label>
         <input type="range" id="sim-cost" name="cost" min="5" max="25" step="1"
@@ -75,7 +75,7 @@
                hx-post="/dashboard/simulate" hx-trigger="input delay:150ms"
                hx-include="closest form" hx-target="#simulation">
       </div>
-      <div style="grid-column: span 2;">
+      <div style="grid-column: 1 / -1;">
         <button type="submit" class="btn btn-quiet">Appliquer comme tarif par défaut</button>
         <span style="font-family: var(--sans); font-size: 12px; color: var(--muted); margin-left: 10px;">
           Ne vaut que pour les <b>prochaines</b> validations — les gains déjà actés ne sont
