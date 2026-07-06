@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # API Recherche d'entreprises (module Fournisseurs) — ouverte, sans clé (ADR-104).
     # Surchargeable : utile en test et pour démontrer la gestion de panne.
     suppliers_api_url: str = "https://recherche-entreprises.api.gouv.fr/search"
+    bodacc_api_url: str = (
+        "https://bodacc-datadila.opendatasoft.com"
+        "/api/explore/v2.1/catalog/datasets/annonces-commerciales/records"
+    )
 
     # Modèles derrière LiteLLM — swappables vers Claude par simple changement de valeur (ADR-001)
     llm_model: str = "mistral/mistral-large-latest"

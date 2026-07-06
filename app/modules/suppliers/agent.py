@@ -9,9 +9,10 @@ timeline affichée à l'utilisateur.
 import json
 
 from app.core import llm
+from app.modules.suppliers.bodacc import search_procedures
 from app.modules.suppliers.client import SearchError, search_companies
 
-MAX_TURNS = 4  # garde-fou anti-boucle infinie
+MAX_TURNS = 5  # garde-fou anti-boucle infinie (2 outils → un tour de plus qu'en M3-b1)
 
 TOOLS = [
     {
@@ -35,12 +36,40 @@ TOOLS = [
                 "required": ["query"],
             },
         },
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "rechercher_procedures_bodacc",
+            "description": (
+                "Recherche les annonces de PROCÉDURES COLLECTIVES (sauvegarde, redressement, "
+                "liquidation judiciaire) publiées au BODACC pour un SIREN donné. "
+                "Source : DILA, annonces légales officielles, data publique. "
+                "Attention : l'absence d'annonce ne prouve pas la bonne santé de l'entreprise."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"siren": {"type": "string", "description": "SIREN à 9 chiffres"}},
+                "required": ["siren"],
+            },
+        },
+    },
 ]
 
 SYSTEM_PROMPT = """Tu es l'analyste fournisseurs de la plateforme AtelIA. Tu évalues la fiabilité
-administrative d'une entreprise française en t'appuyant EXCLUSIVEMENT sur l'outil
-rechercher_entreprise (registres officiels RNE + Sirene).
+administrative d'une entreprise française en t'appuyant EXCLUSIVEMENT sur tes deux outils :
+1. rechercher_entreprise — identité et état administratif (registres RNE + Sirene) ;
+2. rechercher_procedures_bodacc — procédures collectives publiées au BODACC (DILA).
+
+DÉMARCHE : identifie d'abord l'entreprise et son SIREN avec rechercher_entreprise, PUIS
+consulte systématiquement le BODACC avec ce SIREN avant de produire ta synthèse.
+
+RÈGLE BODACC — NUANCE OBLIGATOIRE :
+- Procédure trouvée = signal de risque : signale-le clairement dans la synthèse (nature, date).
+- Aucune procédure trouvée = information NEUTRE : écris exactement « aucune procédure
+  collective trouvée au BODACC (absence non probante) ». INTERDICTION de conclure que
+  l'entreprise est « saine », « solvable » ou « sans risque » sur la base de cette absence.
+- Le BODACC n'entre PAS dans le score : le barème ci-dessous reste inchangé.
 
 RÈGLES D'ANCRAGE — ABSOLUES :
 - Tu raisonnes UNIQUEMENT sur les données réellement renvoyées par l'outil.
@@ -116,20 +145,67 @@ def _parse_final(content: str) -> dict | None:
     return parsed
 
 
-async def _run_tool(name: str, arguments: str) -> str:
-    """Exécute l'outil demandé par le modèle — réutilise la recherche M3-a, sans duplication."""
-    if name != "rechercher_entreprise":
-        return json.dumps({"erreur": f"outil inconnu : {name}"}, ensure_ascii=False)
+def _summarize_procedures(procedures: list[dict]) -> str:
+    if not procedures:
+        return "aucune procédure collective (absence non probante)"
+    parts = [f"{p['nature']} ({p['date_jugement']})" for p in procedures[:3]]
+    extra = f" +{len(procedures) - 3} autre(s)" if len(procedures) > 3 else ""
+    return f"{len(procedures)} procédure(s) : " + " · ".join(parts) + extra
+
+
+async def _run_tool(name: str, arguments: str) -> tuple[str, str, dict | None]:
+    """Exécute l'outil demandé par le modèle. Réutilise les clients M3-a/BODACC existants.
+
+    Retourne (contenu JSON pour le modèle, résumé pour la timeline, capture BODACC ou None).
+    La capture BODACC alimente le bloc d'alerte de l'UI depuis la donnée brute de l'API —
+    jamais depuis le texte du LLM (ancrage).
+    """
     try:
-        query = json.loads(arguments or "{}").get("query", "")
+        args = json.loads(arguments or "{}")
     except ValueError:
-        query = ""
-    if not query:
-        return json.dumps({"erreur": "paramètre query manquant"}, ensure_ascii=False)
-    try:
-        return json.dumps(await search_companies(query), ensure_ascii=False)
-    except SearchError as exc:
-        return json.dumps({"erreur": str(exc)}, ensure_ascii=False)
+        args = {}
+
+    if name == "rechercher_entreprise":
+        query = args.get("query", "")
+        if not query:
+            return (
+                json.dumps({"erreur": "paramètre query manquant"}, ensure_ascii=False),
+                ("paramètre query manquant"),
+                None,
+            )
+        try:
+            companies = await search_companies(query)
+            return (
+                json.dumps(companies, ensure_ascii=False),
+                _summarize_tool_result(companies),
+                None,
+            )
+        except SearchError as exc:
+            return json.dumps({"erreur": str(exc)}, ensure_ascii=False), str(exc), None
+
+    if name == "rechercher_procedures_bodacc":
+        siren = args.get("siren", "")
+        try:
+            procedures = await search_procedures(siren)
+            payload = {
+                "procedures_collectives": procedures,
+                "note": "l'absence de procédure ne prouve pas la bonne santé (non probante)",
+            }
+            capture = {"consulted": True, "procedures": procedures, "error": None}
+            return (
+                json.dumps(payload, ensure_ascii=False),
+                _summarize_procedures(procedures),
+                capture,
+            )
+        except SearchError as exc:
+            capture = {"consulted": True, "procedures": None, "error": str(exc)}
+            return json.dumps({"erreur": str(exc)}, ensure_ascii=False), str(exc), capture
+
+    return (
+        json.dumps({"erreur": f"outil inconnu : {name}"}, ensure_ascii=False),
+        (f"outil inconnu : {name}"),
+        None,
+    )
 
 
 async def analyze(query: str) -> dict:
@@ -139,13 +215,28 @@ async def analyze(query: str) -> dict:
         {"role": "user", "content": f"Évalue la fiabilité de ce fournisseur : {query}"},
     ]
     timeline = []
+    bodacc_capture = None  # rempli depuis la donnée brute de l'API si l'agent consulte le BODACC
     for turn in range(1, MAX_TURNS + 1):
-        reply = await llm.complete_messages(messages, tools=TOOLS)
+        try:
+            reply = await llm.complete_messages(messages, tools=TOOLS)
+        except Exception as exc:  # rate limit, quota, réseau… : message propre, jamais de 500
+            timeline.append(
+                {"turn": turn, "kind": "stopped", "text": f"Appel au modèle échoué : {exc}"[:180]}
+            )
+            return {
+                "timeline": timeline,
+                "result": None,
+                "raw_answer": None,
+                "bodacc": bodacc_capture,
+                "error": "L'appel au modèle a échoué (limite de débit ou indisponibilité) — "
+                "réessayez dans quelques secondes.",
+            }
         if reply["tool_calls"]:
             messages.append(reply["message"])
             for call in reply["tool_calls"]:
                 try:
-                    shown_args = json.loads(call["arguments"] or "{}").get("query", "?")
+                    args = json.loads(call["arguments"] or "{}")
+                    shown_args = args.get("query") or args.get("siren") or "?"
                 except ValueError:
                     shown_args = "?"
                 timeline.append(
@@ -153,19 +244,12 @@ async def analyze(query: str) -> dict:
                         "turn": turn,
                         "kind": "tool_call",
                         "text": f"Le modèle a émis un tool_call (id {call['id']}) : "
-                        f"rechercher_entreprise(« {shown_args} »)",
+                        f"{call['name']}(« {shown_args} »)",
                     }
                 )
-                result = await _run_tool(call["name"], call["arguments"])
-                try:
-                    parsed_result = json.loads(result)
-                    summary = (
-                        parsed_result["erreur"]
-                        if isinstance(parsed_result, dict) and "erreur" in parsed_result
-                        else _summarize_tool_result(parsed_result)
-                    )
-                except ValueError:
-                    summary = "résultat illisible"
+                result, summary, capture = await _run_tool(call["name"], call["arguments"])
+                if capture is not None:
+                    bodacc_capture = capture
                 timeline.append(
                     {"turn": turn, "kind": "tool_result", "text": f"Données reçues : {summary}"}
                 )
@@ -179,6 +263,7 @@ async def analyze(query: str) -> dict:
             "timeline": timeline,
             "result": _parse_final(reply["content"]),
             "raw_answer": reply["content"],
+            "bodacc": bodacc_capture,
             "error": None,
         }
 
@@ -193,5 +278,6 @@ async def analyze(query: str) -> dict:
         "timeline": timeline,
         "result": None,
         "raw_answer": None,
+        "bodacc": bodacc_capture,
         "error": f"L'agent n'a pas conclu en {MAX_TURNS} tours — analyse interrompue proprement.",
     }

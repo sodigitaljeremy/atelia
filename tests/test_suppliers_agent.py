@@ -183,6 +183,109 @@ def test_erreur_outil_transmise_au_modele_sans_crash(monkeypatch):
     assert any("injoignable" in step["text"] for step in analysis["timeline"])
 
 
+def _bodacc_call_reply(call_id="call_bodacc1", siren="552081317"):
+    arguments = json.dumps({"siren": siren})
+    return {
+        "message": {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {"name": "rechercher_procedures_bodacc", "arguments": arguments},
+                }
+            ],
+        },
+        "content": None,
+        "tool_calls": [
+            {"id": call_id, "name": "rechercher_procedures_bodacc", "arguments": arguments}
+        ],
+    }
+
+
+def test_orchestration_deux_outils_enchaines(monkeypatch):
+    """Le modèle enchaîne recherche → BODACC → synthèse : 3 tours, 2 tool_calls distincts."""
+    seen = []
+    monkeypatch.setattr(
+        llm,
+        "complete_messages",
+        _scripted_llm([_tool_call_reply(), _bodacc_call_reply(), _final_reply()], seen),
+    )
+
+    async def fake_search(query, **kwargs):
+        return [FICHE_EDF]
+
+    procedures = [
+        {
+            "nature": "Jugement de conversion en liquidation judiciaire",
+            "date_jugement": "2021-04-14",
+            "date_parution": "2021-04-25",
+            "tribunal": "TC Lille",
+        }
+    ]
+
+    async def fake_bodacc(siren, **kwargs):
+        assert siren == "552081317"  # le SIREN vient du 1er outil, réutilisé par le modèle
+        return procedures
+
+    monkeypatch.setattr(agent, "search_companies", fake_search)
+    monkeypatch.setattr(agent, "search_procedures", fake_bodacc)
+    analysis = asyncio.run(agent.analyze("EDF"))
+
+    tool_calls = [s for s in analysis["timeline"] if s["kind"] == "tool_call"]
+    assert len(tool_calls) == 2
+    assert "rechercher_entreprise" in tool_calls[0]["text"]
+    assert "rechercher_procedures_bodacc" in tool_calls[1]["text"]
+    # la capture serveur alimente le bloc d'alerte depuis la donnée brute de l'API
+    assert analysis["bodacc"]["consulted"] is True
+    assert analysis["bodacc"]["procedures"] == procedures
+    # les deux ToolMessages sont bien repartis au modèle avec leurs ids
+    tool_messages = [m for m in seen[2] if m.get("role") == "tool"]
+    assert [m["tool_call_id"] for m in tool_messages] == ["call_abc123", "call_bodacc1"]
+
+
+def test_bodacc_vide_capture_neutre(monkeypatch):
+    monkeypatch.setattr(
+        llm,
+        "complete_messages",
+        _scripted_llm([_bodacc_call_reply(), _final_reply()], []),
+    )
+
+    async def fake_bodacc(siren, **kwargs):
+        return []
+
+    monkeypatch.setattr(agent, "search_procedures", fake_bodacc)
+    analysis = asyncio.run(agent.analyze("552081317"))
+
+    assert analysis["bodacc"] == {"consulted": True, "procedures": [], "error": None}
+    assert any("absence non probante" in s["text"] for s in analysis["timeline"])
+
+
+def test_bodacc_non_consulte(monkeypatch):
+    monkeypatch.setattr(llm, "complete_messages", _scripted_llm([_final_reply()], []))
+    analysis = asyncio.run(agent.analyze("EDF"))
+    assert analysis["bodacc"] is None
+
+
+def test_erreur_llm_rend_un_message_propre_jamais_un_crash(monkeypatch):
+    async def failing_llm(messages, tools=None, max_tokens=1024):
+        raise RuntimeError("Rate limit exceeded")
+
+    monkeypatch.setattr(llm, "complete_messages", failing_llm)
+    analysis = asyncio.run(agent.analyze("EDF"))
+    assert "réessayez" in analysis["error"]
+    assert analysis["timeline"][-1]["kind"] == "stopped"
+
+
+def test_la_nuance_bodacc_est_dans_le_prompt():
+    prompt = agent.SYSTEM_PROMPT
+    assert "absence non probante" in prompt
+    assert "INTERDICTION de conclure" in prompt
+    assert "n'entre PAS dans le score" in prompt
+    assert "rechercher_procedures_bodacc" in prompt
+
+
 def test_cessee_est_eliminatoire_score_zero(monkeypatch):
     monkeypatch.setattr(
         llm,

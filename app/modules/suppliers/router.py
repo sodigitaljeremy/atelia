@@ -49,6 +49,7 @@ async def suppliers_agent(request: Request, q: str = Form("")):
             "timeline": analysis["timeline"],
             "result": analysis["result"],
             "raw_answer": analysis["raw_answer"],
+            "bodacc": analysis["bodacc"],
             "error": analysis["error"],
         },
     )
