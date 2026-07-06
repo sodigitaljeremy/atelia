@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Assistant conformité — AtelIA{% endblock %}
+{% block content %}
+  <h1>Assistant conformité</h1>
+  <p class="subtitle">
+    Retrouver la règle exacte — étiquetage, allergènes — sans éplucher le règlement.
+  </p>
+
+  <div class="alert" style="background: #f0e6c8; border-color: #dcc98f; color: #7a5f18;">
+    <b>Phase 1 — recherche sémantique brute</b> : les passages du texte officiel sont
+    retrouvés par similarité, pas interprétés. La réponse rédigée avec citations
+    obligatoires arrive en phase 2.
+  </div>
+
+  <h2>Corpus indexé</h2>
+  <div class="card" style="padding: 8px 16px;">
+    {% if documents %}
+      <table>
+        <thead><tr><th>Document</th><th>CELEX</th><th>Consolidation</th><th class="num">Passages indexés</th></tr></thead>
+        <tbody>
+          {% for d in documents %}
+            <tr>
+              <td>{{ d.titre }}</td>
+              <td class="mono"><a class="row-link" href="{{ d.source_url }}" hx-boost="false">{{ d.source_celex }}</a></td>
+              <td class="mono">{{ d.source_date or "—" }}</td>
+              <td class="num mono">{{ d.chunks }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">
+        Aucun corpus indexé — déposer le texte officiel dans <span class="mono">data/corpus/</span>
+        puis lancer <span class="mono">scripts/ingest_compliance.py</span> (ou redémarrer l'app).
+      </p>
+    {% endif %}
+  </div>
+
+  <h2>Tester la recherche sémantique</h2>
+  <div class="card">
+    <form hx-post="/compliance/search" hx-target="#chunks" hx-indicator="#search-loading"
+          style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 260px;">
+        <label for="q">Question ou mots-clés</label>
+        <input type="text" id="q" name="q" placeholder="ex. quels allergènes faut-il déclarer ?"
+               style="width: 100%; padding: 8px 10px; font-family: var(--mono); font-size: 14px;
+                      border: 1px solid var(--line); border-radius: 3px;">
+      </div>
+      <button type="submit" class="btn btn-primary">Rechercher</button>
+      <span id="search-loading" class="htmx-indicator" style="font-family: var(--sans); font-size: 13px; color: var(--muted);">
+        ⏳ vectorisation de la requête…</span>
+    </form>
+  </div>
+
+  <div id="chunks" style="margin-top: 20px;"></div>
+
+  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px;">
+    Source : règlement (UE) n° 1169/2011 consolidé (EUR-Lex, texte officiel) ·
+    embeddings mistral-embed · recherche pgvector (cosinus). Outil de démonstration —
+    ne constitue pas un conseil juridique.
+  </p>
+{% endblock %}

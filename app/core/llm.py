@@ -67,6 +67,27 @@ async def complete_messages(
     }
 
 
+async def embed_many(texts: list[str]) -> dict:
+    """Embeddings par lot (RAG : vectorisation à l'ingestion, jamais à chaque requête).
+
+    Retourne les VECTEURS (contrairement à embed(), pensé pour le ping) + observabilité.
+    """
+    start = time.perf_counter()
+    response = await aembedding(
+        model=settings.embed_model,
+        input=texts,
+        api_key=settings.mistral_api_key or None,
+    )
+    # l'ordre de response.data suit l'ordre d'entrée (index fourni par l'API)
+    vectors = [item["embedding"] for item in sorted(response.data, key=lambda d: d["index"])]
+    return {
+        "model": settings.embed_model,
+        "vectors": vectors,
+        "latency_ms": round((time.perf_counter() - start) * 1000),
+        "tokens": {"prompt": response.usage.prompt_tokens},
+    }
+
+
 async def embed(text: str) -> dict:
     start = time.perf_counter()
     response = await aembedding(
