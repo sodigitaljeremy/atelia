@@ -1,0 +1,58 @@
+{% if error and not timeline %}
+  <div class="alert">{{ error }}</div>
+{% else %}
+  <h2>Raisonnement de l'agent</h2>
+  <div class="card" style="padding: 14px 20px;">
+    <ol style="margin: 0; padding-left: 18px; font-family: var(--sans); font-size: 13.5px;">
+      {% for step in timeline %}
+        <li style="padding: 5px 0; {% if step.kind == 'tool_call' %}color: var(--green);{% elif step.kind == 'stopped' %}color: var(--terra);{% endif %}">
+          <b>Tour {{ step.turn }}</b> — {{ step.text }}
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  {% if error %}
+    <div class="alert" style="margin-top: 14px;">{{ error }}</div>
+  {% elif result %}
+    <h2>Synthèse de l'agent — « {{ query }} »</h2>
+    <div class="card">
+      <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+        <div style="min-width: 130px; text-align: center;">
+          <div style="font-family: var(--mono); font-size: 44px; color: {{ 'var(--green-deep)' if (result.score or 0) >= 60 else ('var(--gold)' if (result.score or 0) >= 35 else 'var(--terra)') }};">
+            {{ result.score if result.score is not none else "—" }}<span style="font-size: 18px; color: var(--muted);">/100</span>
+          </div>
+          <div style="font-family: var(--sans); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted);">
+            Score de fiabilité</div>
+        </div>
+        <p style="flex: 1; min-width: 260px; font-size: 15px;">{{ result.synthese }}</p>
+      </div>
+      {% if result.criteres %}
+        <table style="margin-top: 16px; font-size: 13.5px;">
+          <thead><tr><th>Critère</th><th class="num">Points</th><th>Justification</th></tr></thead>
+          <tbody>
+            {% for c in result.criteres %}
+              <tr>
+                <td>{{ c.critere }}</td>
+                <td class="num mono">{{ c.points }}</td>
+                <td style="color: var(--muted);">{{ c.justification }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+  {% elif raw_answer %}
+    <h2>Synthèse de l'agent (format libre)</h2>
+    <div class="card">
+      <p style="font-size: 14.5px;">{{ raw_answer }}</p>
+      <p style="font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 8px;">
+        Score non déterminé : la réponse du modèle n'était pas au format attendu.</p>
+    </div>
+  {% endif %}
+
+  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px;">
+    Analyse générée par IA (Mistral) à partir de données publiques (RNE + Sirene) ;
+    le score est une aide indicative, pas un avis financier.
+  </p>
+{% endif %}

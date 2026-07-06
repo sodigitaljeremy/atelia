@@ -44,4 +44,27 @@
   </div>
 
   <div id="results" style="margin-top: 20px;"></div>
+
+  <h2>Analyse par l'agent</h2>
+  <div class="card">
+    <p style="font-family: var(--sans); font-size: 13.5px; color: var(--muted); margin-bottom: 12px;">
+      Ici, un agent IA (Mistral) décide lui-même d'appeler l'outil de recherche
+      (function-calling), lit les données officielles et produit un score de fiabilité
+      expliqué. Son raisonnement s'affiche tour par tour.
+    </p>
+    <form hx-post="/suppliers/agent" hx-target="#agent-results" hx-indicator="#agent-loading"
+          style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 260px;">
+        <label for="agent-q">Nom d'entreprise ou SIREN</label>
+        <input type="text" id="agent-q" name="q" placeholder="ex. EDF, ou 344260286"
+               style="width: 100%; padding: 8px 10px; font-family: var(--mono); font-size: 14px;
+                      border: 1px solid var(--line); border-radius: 3px;">
+      </div>
+      <button type="submit" class="btn btn-primary">Analyser</button>
+      <span id="agent-loading" class="htmx-indicator" style="font-family: var(--sans); font-size: 13px; color: var(--muted);">
+        ⏳ analyse en cours (l'agent interroge les registres)…</span>
+    </form>
+  </div>
+
+  <div id="agent-results" style="margin-top: 20px;"></div>
 {% endblock %}

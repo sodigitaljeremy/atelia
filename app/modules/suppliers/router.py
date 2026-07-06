@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Form, Request
 
 from app.core.templates import module_templates
+from app.modules.suppliers import agent
 from app.modules.suppliers.client import SearchError, search_companies
 
 templates = module_templates(Path(__file__).parent / "templates")
@@ -26,6 +27,30 @@ EXAMPLES = [
 async def suppliers_home(request: Request):
     return templates.TemplateResponse(
         request, "suppliers.html", {"examples": EXAMPLES, "active": "suppliers"}
+    )
+
+
+@router.post("/suppliers/agent")
+async def suppliers_agent(request: Request, q: str = Form("")):
+    """Fragment HTMX : analyse agentique (timeline + synthèse + score expliqué)."""
+    q = q.strip()
+    if not q:
+        return templates.TemplateResponse(
+            request,
+            "_agent.html",
+            {"error": "Saisissez un nom d'entreprise ou un SIREN.", "timeline": [], "query": q},
+        )
+    analysis = await agent.analyze(q)
+    return templates.TemplateResponse(
+        request,
+        "_agent.html",
+        {
+            "query": q,
+            "timeline": analysis["timeline"],
+            "result": analysis["result"],
+            "raw_answer": analysis["raw_answer"],
+            "error": analysis["error"],
+        },
     )
 
 
