@@ -1,0 +1,38 @@
+{% if error %}
+  <div class="alert">{{ error }}</div>
+  {% if garde_fou %}
+    <div class="alert" style="margin-top: 10px;">
+      🛡 Signaux de sécurité alimentaire détectés malgré l'échec de la classification :
+      {{ signaux | join(" · ") }} — à traiter en priorité par un humain.
+    </div>
+  {% endif %}
+{% elif result %}
+  {% if garde_fou %}
+    <div class="alert" style="border-left: 6px solid var(--terra);">
+      🛡 <b>Garde-fou sécurité déclenché</b> — signaux : {{ signaux | join(" · ") }}.
+      Priorité forcée à « critique » et routage vers la sécurité alimentaire :
+      le jugement du modèle est outrepassé par une règle déterministe.
+    </div>
+  {% endif %}
+  <h2>Classification</h2>
+  <div class="card">
+    <div style="display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap;">
+      <span class="badge ok">{{ result.categorie }}</span>
+      <span class="badge"
+            style="{% if result.priorite == 'critique' %}background: var(--terra); color: #fff; border: none;
+                   {% elif result.priorite == 'haute' %}background: #f0e6c8; color: #7a5f18; border: 1px solid #dcc98f;
+                   {% else %}background: var(--line-soft); color: var(--muted); border: 1px solid var(--line);{% endif %}">
+        priorité {{ result.priorite }}</span>
+      <span style="font-family: var(--sans); font-size: 13px; color: var(--muted); margin-left: auto;">
+        → {{ result.service_destinataire }}</span>
+    </div>
+    <p style="font-size: 15px; margin-top: 12px;">{{ result.resume }}</p>
+    {% if result.entites %}
+      <table style="margin-top: 12px; font-size: 13.5px; max-width: 480px;">
+        {% for key, value in result.entites.items() %}
+          <tr><td style="color: var(--muted); width: 160px;">{{ key }}</td><td class="mono">{{ value }}</td></tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  </div>
+{% endif %}

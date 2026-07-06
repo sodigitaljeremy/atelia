@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Triage des messages — AtelIA{% endblock %}
+{% block content %}
+  <h1>Triage des messages entrants</h1>
+  <p class="subtitle">
+    Réclamations, demandes, alertes : catégorisées, priorisées et routées automatiquement —
+    l'humain traite, il ne dépouille plus.
+  </p>
+
+  <div class="card" style="margin-bottom: 20px;">
+    <p style="font-family: var(--sans); font-size: 14px;">
+      Classification <b>zero-shot</b> : le modèle n'a vu aucun exemple étiqueté, il applique
+      des catégories fermées décrites dans sa consigne. Et parce qu'on ne confie pas le
+      critique à un LLM : un <b>garde-fou déterministe</b> (règles en code) force la priorité
+      « critique » sur tout signal de sécurité alimentaire, quel que soit l'avis du modèle.
+    </p>
+  </div>
+
+  <h2>Essayez sur des messages types</h2>
+  <div class="card" style="display: flex; gap: 12px; flex-wrap: wrap;">
+    {% for label, text in examples %}
+      <form hx-post="/triage/classify" hx-target="#classification" hx-indicator="#triage-loading"
+            style="margin: 0;">
+        <input type="hidden" name="message" value="{{ text }}">
+        <button type="submit" class="btn btn-quiet" style="text-align: left; max-width: 220px;">
+          <b>{{ label }}</b><br>
+          <span style="font-size: 11px; color: var(--muted); font-weight: 400;">{{ text[:70] }}…</span>
+        </button>
+      </form>
+    {% endfor %}
+  </div>
+
+  <h2>Ou collez votre propre message</h2>
+  <div class="card">
+    <form hx-post="/triage/classify" hx-target="#classification" hx-indicator="#triage-loading">
+      <label for="message">Message entrant (email, formulaire, réclamation…)</label>
+      <textarea id="message" name="message" rows="4"
+                placeholder="Collez ici un message à trier…"
+                style="width: 100%; padding: 10px; font-family: var(--sans); font-size: 14px;
+                       border: 1px solid var(--line); border-radius: 3px; resize: vertical;"></textarea>
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 12px;">
+        <button type="submit" class="btn btn-primary">Classer</button>
+        <span id="triage-loading" class="htmx-indicator" style="font-family: var(--sans); font-size: 13px; color: var(--muted);">
+          ⏳ classification en cours…</span>
+      </div>
+    </form>
+  </div>
+
+  <div id="classification" style="margin-top: 20px;"></div>
+
+  <p style="font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 10px;">
+    Classification par IA (Mistral) en zero-shot sur données synthétiques ; priorité sécurité
+    vérifiée par règle déterministe. Démonstration.
+  </p>
+{% endblock %}
